@@ -130,6 +130,9 @@ $sql = "SELECT s.*, u.nom as prof_nom, u.prenom as prof_prenom,
         CAST(s.note_cc AS DECIMAL(4,2)) as note_cc,
         CAST(s.exam AS DECIMAL(4,2)) as exam,
         CAST(s.ratt AS DECIMAL(4,2)) as ratt,
+        CAST(s.t01 AS DECIMAL(4,2)) as t01,
+        CAST(s.t02 AS DECIMAL(4,2)) as t02,
+        CAST(s.participation AS DECIMAL(4,2)) as participation,
         CAST(s.moygen AS DECIMAL(4,2)) as moygen
         FROM usto_students s 
         LEFT JOIN usto_users u ON s.id_prof = u.id 
@@ -201,6 +204,9 @@ $etudiants = $stmt->fetchAll();
                                     <option value="note_cc">Note CC</option>
                                     <option value="exam">Note Examen</option>
                                     <option value="ratt">Note Rattrapage</option>
+                                    <option value="t01">Test 1</option>
+                                    <option value="t02">Test 2</option>
+                                    <option value="participation">Participation (Note/2)</option>
                                 </select>
                             </div>
                             <button type="submit" name="submit_import" class="btn btn-primary">Importer</button>
@@ -260,7 +266,17 @@ $etudiants = $stmt->fetchAll();
                                             <th>Prénom</th>
                                             <th>Groupe</th>
                                             <th>Professeur</th>
-                                            <th><?= $note_type === 'note_cc' ? 'CC' : ($note_type === 'exam' ? 'Examen' : ($note_type === 'ratt' ? 'Rattrapage' : 'Note')) ?></th>
+                                            <th><?php
+                                                switch($note_type) {
+                                                    case 'note_cc': echo 'CC'; break;
+                                                    case 'exam': echo 'Examen'; break;
+                                                    case 'ratt': echo 'Rattrapage'; break;
+                                                    case 't01': echo 'Test 1'; break;
+                                                    case 't02': echo 'Test 2'; break;
+                                                    case 'participation': echo 'Participation'; break;
+                                                    default: echo 'Note';
+                                                }
+                                            ?></th>
                                             <th>Moyenne</th>
                                             <th>Actions</th>
                                         </tr>
