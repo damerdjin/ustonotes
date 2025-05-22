@@ -64,6 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 // Récupérer la valeur complète de la dernière colonne (format: section1/groupe 1)
                 $groupe = trim(end($row));
                 
+                    // Vérifier si le prénom contient des caractères invalides
+    if (!mb_check_encoding($prenom, 'UTF-8')) {
+        throw new Exception("$prenom");
+    }
+
+    // Vérifier si le nom contient des caractères invalides
+    if (!mb_check_encoding($nom, 'UTF-8')) {
+        throw new Exception("Caractère invalide dans le nom à la ligne $line_number: $nom");
+    }
+
                 // Vérifier si l'étudiant existe
                 $check = $db->prepare("SELECT id FROM usto_students WHERE matricule = ?");
                 $check->execute([$matricule]);
