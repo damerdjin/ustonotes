@@ -3,6 +3,12 @@ require_once '../includes/config.php';
 require_once '../includes/functions.php';
 require_admin();
 
+// Configuration de l'encodage
+mb_internal_encoding('UTF-8');
+$db->exec("SET NAMES utf8mb4");
+$db->exec("SET CHARACTER SET utf8mb4");
+$db->exec("SET collation_connection = utf8mb4_unicode_ci");
+
 $success = null;
 $error = null;
 
@@ -20,9 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
     
     if (!empty($_FILES['csv_file']['tmp_name'])) {
         try {
-            $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            // Ouvrir le fichier en mode UTF-8
+            setlocale(LC_ALL, 'fr_FR.UTF-8');
+            $content = file_get_contents($_FILES['csv_file']['tmp_name']);
+            
+            // Détecter et convertir l'encodage si nécessaire
+            $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-1252', 'ISO-8859-1'], true);
+            if ($encoding !== 'UTF-8') {
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+            }
+            
+            // Créer un flux temporaire avec le contenu converti
+            $handle = fopen('php://memory', 'r+');
+            fwrite($handle, $content);
+            rewind($handle);
+            
             if ($handle === false) {
-                throw new Exception('Impossible d\'ouvrir le fichier CSV');
+                throw new Exception('Impossible de traiter le fichier CSV');
             }
             
             // Ignorer les deux premières lignes (titre et en-têtes)
