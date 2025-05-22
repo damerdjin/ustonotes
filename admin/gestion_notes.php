@@ -7,8 +7,8 @@ $success = null;
 $error = null;
 
 // Récupération des groupes
-$stmt = $db->query("SELECT * FROM usto_groupes ORDER BY nom_groupe");
-$groupes = $stmt->fetchAll();
+$stmt = $db->query("SELECT DISTINCT groupe FROM usto_students ORDER BY groupe");
+$groupes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Récupération des professeurs
 $stmt = $db->query("SELECT * FROM usto_users WHERE admin = 0 AND activated = 1 ORDER BY nom, prenom");
@@ -20,10 +20,9 @@ $filter_prof = isset($_GET['filter_prof']) ? $_GET['filter_prof'] : '';
 $filter_status = isset($_GET['filter_status']) ? $_GET['filter_status'] : '';
 
 // Construction de la requête SQL avec les filtres
-$sql = "SELECT s.*, u.nom as prof_nom, u.prenom as prof_prenom, g.nom_groupe 
+$sql = "SELECT s.*, u.nom as prof_nom, u.prenom as prof_prenom, s.groupe as nom_groupe 
         FROM usto_students s 
         LEFT JOIN usto_users u ON s.id_prof = u.id 
-        LEFT JOIN usto_groupes g ON s.groupe = g.id 
         WHERE 1=1";
 $params = [];
 
@@ -114,9 +113,9 @@ $taux_reussite = ($total_etudiants - $non_evalues) > 0 ? round(($admis / ($total
                             <div class="col-md-3">
                                 <select name="filter_groupe" class="form-select">
                                     <option value="">Tous les groupes</option>
-                                    <?php foreach ($groupes as $g): ?>
-                                        <option value="<?= $g['id'] ?>" <?= $filter_groupe == $g['id'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($g['nom_groupe']) ?>
+                                    <?php foreach ($groupes as $groupe): ?>
+                                        <option value="<?= $groupe ?>" <?= $filter_groupe == $groupe ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($groupe) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
