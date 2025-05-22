@@ -7,7 +7,7 @@ $success = null;
 $error = null;
 
 // Récupération des groupes
-$stmt = $db->query("SELECT * FROM usto_groupes ORDER BY nom_groupe");
+$stmt = $db->query("SELECT DISTINCT groupe FROM usto_students ORDER BY groupe");
 $groupes = $stmt->fetchAll();
 
 // Récupération des professeurs
@@ -16,42 +16,69 @@ $professeurs = $stmt->fetchAll();
 
 // Traitement du formulaire d'importation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
-    $groupe = $_POST['groupe'];
-    $prof_id = $_POST['prof_id'];
-    $etudiants_data = $_POST['etudiants'];
+    $note_type = $_POST['note_type'] ?? '';
     
-    // Vérification des données
-    if (empty($groupe) || empty($prof_id) || empty($etudiants_data)) {
-        $error = "Tous les champs sont obligatoires";
-    } else {
-        // Traitement des données des étudiants
-        $lignes = explode("\n", $etudiants_data);
-        $importes = 0;
-        $erreurs = 0;
-        
-        foreach ($lignes as $ligne) {
-            $ligne = trim($ligne);
-            if (empty($ligne)) continue;
+    if (!empty($_FILES['csv_file']['tmp_name'])) {
+        try {
+            $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            if ($handle === false) {
+                throw new Exception('Impossible d\'ouvrir le fichier CSV');
+            }
             
-            // Format attendu: Matricule;Nom;Prénom
-            $data = explode(";", $ligne);
-            if (count($data) >= 3) {
-                $matricule = trim($data[0]);
-                $nom = trim($data[1]);
-                $prenom = trim($data[2]);
+            // Ignorer les deux premières lignes (titre et en-têtes)
+            for ($i = 0; $i < 2; $i++) {
+                fgetcsv($handle, 0, ";");
+            }
+            
+            $importes = 0;
+            $erreurs = 0;
+            
+            while (($row = fgetcsv($handle, 0, ";")) !== false) {
+                if (empty($row[0])) continue;
                 
-                // Vérification si l'étudiant existe déjà
-                $check = $db->prepare("SELECT COUNT(*) FROM usto_students WHERE matricule = ?");
+                $matricule = substr(trim($row[0]), 0, 20); // Limiter la longueur du matricule
+                $nom = substr(trim($row[1]), 0, 50); // Limiter la longueur du nom
+                $prenom = substr(trim($row[2]), 0, 50); // Limiter la longueur du prénom
+                $note = !empty($row[3]) ? floatval($row[3]) : null;
+                
+                // Extraire le groupe de la dernière colonne (format: section1/groupe 1)
+                $groupe_info = explode('/', end($row));
+                $groupe = trim(end($groupe_info));
+                
+                // Vérifier si l'étudiant existe
+                $check = $db->prepare("SELECT id FROM usto_students WHERE matricule = ?");
                 $check->execute([$matricule]);
+                $etudiant_id = $check->fetchColumn();
                 
-                if ($check->fetchColumn() > 0) {
+                if ($etudiant_id) {
                     // Mise à jour de l'étudiant existant
-                    $stmt = $db->prepare("UPDATE usto_students SET nom = ?, prenom = ?, groupe = ?, id_prof = ? WHERE matricule = ?");
-                    $result = $stmt->execute([$nom, $prenom, $groupe, $prof_id, $matricule]);
+                    $sql = "UPDATE usto_students SET nom = ?, prenom = ?, groupe = ?"
+                         . ($note_type && $note !== null ? ", $note_type = ?" : "")
+                         . " WHERE matricule = ?";
+                    
+                    $params = [$nom, $prenom, $groupe];
+                    if ($note_type && $note !== null) {
+                        $params[] = $note;
+                    }
+                    $params[] = $matricule;
+                    
+                    $stmt = $db->prepare($sql);
+                    $result = $stmt->execute($params);
                 } else {
                     // Insertion d'un nouvel étudiant
-                    $stmt = $db->prepare("INSERT INTO usto_students (matricule, nom, prenom, groupe, id_prof) VALUES (?, ?, ?, ?, ?)");
-                    $result = $stmt->execute([$matricule, $nom, $prenom, $groupe, $prof_id]);
+                    $sql = "INSERT INTO usto_students (matricule, nom, prenom, groupe" 
+                         . ($note_type && $note !== null ? ", $note_type" : "") 
+                         . ") VALUES (?, ?, ?, ?" 
+                         . ($note_type && $note !== null ? ", ?" : "") 
+                         . ")";
+                    
+                    $params = [$matricule, $nom, $prenom, $groupe];
+                    if ($note_type && $note !== null) {
+                        $params[] = $note;
+                    }
+                    
+                    $stmt = $db->prepare($sql);
+                    $result = $stmt->execute($params);
                 }
                 
                 if ($result) {
@@ -59,16 +86,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 } else {
                     $erreurs++;
                 }
-            } else {
-                $erreurs++;
             }
+            
+            if ($importes > 0) {
+                $success = "$importes étudiant(s) importé(s) avec succès. $erreurs erreur(s) rencontrée(s).";
+            } else {
+                $error = "Aucun étudiant n'a été importé. Vérifiez le format des données.";
+            }
+            
+        } catch (Exception $e) {
+            $error = "Erreur lors de l'importation du fichier: " . $e->getMessage();
         }
-        
-        if ($importes > 0) {
-            $success = "$importes étudiant(s) importé(s) avec succès. $erreurs erreur(s) rencontrée(s).";
-        } else {
-            $error = "Aucun étudiant n'a été importé. Vérifiez le format des données.";
-        }
+    } else {
+        $error = "Veuillez sélectionner un fichier XLSX à importer.";
     }
 }
 
@@ -134,31 +164,20 @@ $etudiants = $stmt->fetchAll();
                 <div class="card">
                     <div class="card-header">Importer des étudiants</div>
                     <div class="card-body">
-                        <form method="POST">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="groupe" class="form-label">Groupe</label>
-                                    <select name="groupe" id="groupe" class="form-select" required>
-                                        <option value="">-- Sélectionner un groupe --</option>
-                                        <?php foreach ($groupes as $g): ?>
-                                            <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nom_groupe']) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="prof_id" class="form-label">Professeur</label>
-                                    <select name="prof_id" id="prof_id" class="form-select" required>
-                                        <option value="">-- Sélectionner un professeur --</option>
-                                        <?php foreach ($professeurs as $p): ?>
-                                            <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nom'] . ' ' . $p['prenom']) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="csv_file" class="form-label">Fichier CSV</label>
+                                <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
+                                <div class="form-text">Format attendu: Matricule, Nom, Prénom, Note, etc. (séparés par des points-virgules)</div>
                             </div>
                             <div class="mb-3">
-                                <label for="etudiants" class="form-label">Liste des étudiants (format: Matricule;Nom;Prénom)</label>
-                                <textarea name="etudiants" id="etudiants" class="form-control" rows="10" required></textarea>
-                                <div class="form-text">Un étudiant par ligne. Format: Matricule;Nom;Prénom</div>
+                                <label for="note_type" class="form-label">Type de note à importer</label>
+                                <select name="note_type" id="note_type" class="form-select">
+                                    <option value="">Aucune note</option>
+                                    <option value="note_cc">Note CC</option>
+                                    <option value="exam">Note Examen</option>
+                                    <option value="ratt">Note Rattrapage</option>
+                                </select>
                             </div>
                             <button type="submit" name="submit_import" class="btn btn-primary">Importer</button>
                         </form>
