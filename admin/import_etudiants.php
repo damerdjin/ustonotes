@@ -61,9 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 $prenom = substr(trim($row[2]), 0, 50); // Limiter la longueur du prénom
                 $note = !empty($row[3]) ? floatval($row[3]) : null;
                 
-                // Extraire le groupe de la dernière colonne (format: section1/groupe 1)
-                $groupe_info = explode('/', end($row));
-                $groupe = trim(end($groupe_info));
+                // Récupérer la valeur complète de la dernière colonne (format: section1/groupe 1)
+                $groupe = trim(end($row));
                 
                 // Vérifier si l'étudiant existe
                 $check = $db->prepare("SELECT id FROM usto_students WHERE matricule = ?");
@@ -118,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
             $error = "Erreur lors de l'importation du fichier: " . $e->getMessage();
         }
     } else {
-        $error = "Veuillez sélectionner un fichier XLSX à importer.";
+        $error = "Veuillez sélectionner un fichier CSV à importer.";
     }
 }
 
@@ -216,8 +215,8 @@ $etudiants = $stmt->fetchAll();
                                 <select name="filter_groupe" class="form-select">
                                     <option value="">Tous les groupes</option>
                                     <?php foreach ($groupes as $g): ?>
-                                        <option value="<?= $g['id'] ?>" <?= $filter_groupe == $g['id'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($g['nom_groupe']) ?>
+                                        <option value="<?= htmlspecialchars($g['groupe']) ?>" <?= $filter_groupe == $g['groupe'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($g['groupe']) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -270,17 +269,10 @@ $etudiants = $stmt->fetchAll();
                                                 <td><?= htmlspecialchars($e['prenom']) ?></td>
                                                 <td>
                                                     <?php 
-                                                    $groupe_nom = "";
-                                                    foreach ($groupes as $g) {
-                                                        if ($g['id'] == $e['groupe']) {
-                                                            $groupe_nom = $g['nom_groupe'];
-                                                            break;
-                                                        }
-                                                    }
-                                                    echo htmlspecialchars($groupe_nom);
+                                                    echo htmlspecialchars($e['groupe']);
                                                     ?>
                                                 </td>
-                                                <td><?= htmlspecialchars($e['prof_nom'] . ' ' . $e['prof_prenom']) ?></td>
+                                                <td><?= htmlspecialchars($e['prof_nom']) ?></td>                                                
                                                 <td>
                                                     <?php if ($e['moygen']): ?>
                                                         <span class="badge bg-<?= $e['moygen'] >= 10 ? 'success' : 'danger' ?>">
