@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 $matricule = substr(trim($row[0]), 0, 20); // Limiter la longueur du matricule
                 $nom = substr(trim($row[1]), 0, 50); // Limiter la longueur du nom
                 $prenom = substr(trim($row[2]), 0, 50); // Limiter la longueur du prénom
-                $note = !empty($row[3]) ? floatval($row[3]) : null;
+                $note = !empty($row[3]) ? number_format((float)$row[3], 2, '.', '') : null;
                 
                 // Récupérer la valeur complète de la dernière colonne (format: section1/groupe 1)
                 $groupe = trim(end($row));
@@ -124,8 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
 // Traitement de l'affichage des étudiants
 $filter_groupe = isset($_GET['filter_groupe']) ? $_GET['filter_groupe'] : '';
 $filter_prof = isset($_GET['filter_prof']) ? $_GET['filter_prof'] : '';
+$note_type = isset($_POST['note_type']) ? $_POST['note_type'] : '';
 
-$sql = "SELECT s.*, u.nom as prof_nom, u.prenom as prof_prenom 
+$sql = "SELECT s.*, u.nom as prof_nom, u.prenom as prof_prenom,
+        CAST(s.note_cc AS DECIMAL(4,2)) as note_cc,
+        CAST(s.exam AS DECIMAL(4,2)) as exam,
+        CAST(s.ratt AS DECIMAL(4,2)) as ratt,
+        CAST(s.moygen AS DECIMAL(4,2)) as moygen
         FROM usto_students s 
         LEFT JOIN usto_users u ON s.id_prof = u.id 
         WHERE 1=1";
@@ -250,12 +255,12 @@ $etudiants = $stmt->fetchAll();
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
                                             <th>Matricule</th>
                                             <th>Nom</th>
                                             <th>Prénom</th>
                                             <th>Groupe</th>
                                             <th>Professeur</th>
+                                            <th><?= $note_type === 'note_cc' ? 'CC' : ($note_type === 'exam' ? 'Examen' : ($note_type === 'ratt' ? 'Rattrapage' : 'Note')) ?></th>
                                             <th>Moyenne</th>
                                             <th>Actions</th>
                                         </tr>
@@ -263,7 +268,6 @@ $etudiants = $stmt->fetchAll();
                                     <tbody>
                                         <?php foreach ($etudiants as $e): ?>
                                             <tr>
-                                                <td><?= $e['id'] ?></td>
                                                 <td><?= htmlspecialchars($e['matricule']) ?></td>
                                                 <td><?= htmlspecialchars($e['nom']) ?></td>
                                                 <td><?= htmlspecialchars($e['prenom']) ?></td>
@@ -272,7 +276,16 @@ $etudiants = $stmt->fetchAll();
                                                     echo htmlspecialchars($e['groupe']);
                                                     ?>
                                                 </td>
-                                                <td><?= htmlspecialchars($e['prof_nom']) ?></td>                                                
+                                                <td><?= htmlspecialchars($e['prof_nom']) ?></td>
+                                                <td>
+                                                    <?php if (isset($e[$note_type])): ?>
+                                                        <span class="badge bg-<?= $e[$note_type] >= 10 ? 'success' : 'danger' ?>">
+                                                            <?= number_format($e[$note_type], 2, '.', '') ?>/20
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-secondary">Non évalué</span>
+                                                    <?php endif; ?>
+                                                </td>
                                                 <td>
                                                     <?php if ($e['moygen']): ?>
                                                         <span class="badge bg-<?= $e['moygen'] >= 10 ? 'success' : 'danger' ?>">
@@ -281,10 +294,6 @@ $etudiants = $stmt->fetchAll();
                                                     <?php else: ?>
                                                         <span class="badge bg-secondary">Non évalué</span>
                                                     <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <a href="?edit=<?= $e['id'] ?>" class="btn btn-sm btn-warning">Modifier</a>
-                                                    <a href="?delete=<?= $e['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet étudiant?')">Supprimer</a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
