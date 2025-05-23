@@ -229,48 +229,6 @@ $etudiants = $stmt->fetchAll();
 
         <div class="row mb-4">
             <div class="col-md-12">
-                <div class="accordion" id="accordionImport">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingOne">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                Importer des étudiants (Cliquer pour ouvrir/fermer)
-                            </button>
-                        </h2>
-                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionImport">
-                            <div class="accordion-body">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <form method="POST" enctype="multipart/form-data">
-                                            <div class="mb-3">
-                                                <label for="csv_file" class="form-label">Fichier CSV</label>
-                                                <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
-                                                <div class="form-text">Format attendu: Matricule, Nom, Prénom, Note, etc. (séparés par des points-virgules)</div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="note_type" class="form-label">Type de note à importer</label>
-                                                <select name="note_type" id="note_type" class="form-select">
-                                                    <option value="">Aucune note</option>
-                                                    <option value="note_cc">Note CC</option>
-                                                    <option value="exam">Note Examen</option>
-                                                    <option value="ratt">Note Rattrapage</option>
-                                                    <option value="t01">Test 1</option>
-                                                    <option value="t02">Test 2</option>
-                                                    <option value="participation">Participation (Note/2)</option>
-                                                </select>
-                                            </div>
-                                            <button type="submit" name="submit_import" class="btn btn-primary">Importer</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-md-12">
                 <div class="card">
                     <div class="card-header">Filtrer les étudiants</div>
                     <div class="card-body">
