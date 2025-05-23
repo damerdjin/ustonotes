@@ -32,7 +32,7 @@ CREATE TABLE usto_users (
 
 CREATE TABLE usto_prof_permissions (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    prof_id INT NOT NULL,
+    prof_id INT(11) NOT NULL,
     note_type VARCHAR(20) NOT NULL,
     can_view BOOLEAN DEFAULT 1,
     can_edit BOOLEAN DEFAULT 0,

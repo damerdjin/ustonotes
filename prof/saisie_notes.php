@@ -39,13 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_notes'])) {
     $updated = 0;
     
     foreach ($student_ids as $index => $student_id) {
-        // Récupération des notes
-        $t01 = isset($_POST['t01'][$index]) ? $_POST['t01'][$index] : null;
-        $t02 = isset($_POST['t02'][$index]) ? $_POST['t02'][$index] : null;
-        $participation = isset($_POST['participation'][$index]) ? $_POST['participation'][$index] : null;
-        $note_cc = isset($_POST['note_cc'][$index]) ? $_POST['note_cc'][$index] : null;
-        $exam = isset($_POST['exam'][$index]) ? $_POST['exam'][$index] : null;
-        $ratt = isset($_POST['ratt'][$index]) ? $_POST['ratt'][$index] : null;
+        // Récupération des notes, convertir les chaînes vides en null
+        $t01 = (isset($_POST['t01'][$index]) && $_POST['t01'][$index] !== '') ? $_POST['t01'][$index] : null;
+        $t02 = (isset($_POST['t02'][$index]) && $_POST['t02'][$index] !== '') ? $_POST['t02'][$index] : null;
+        $participation = (isset($_POST['participation'][$index]) && $_POST['participation'][$index] !== '') ? $_POST['participation'][$index] : null;
+        $note_cc = (isset($_POST['note_cc'][$index]) && $_POST['note_cc'][$index] !== '') ? $_POST['note_cc'][$index] : null;
+        $exam = (isset($_POST['exam'][$index]) && $_POST['exam'][$index] !== '') ? $_POST['exam'][$index] : null;
+        $ratt = (isset($_POST['ratt'][$index]) && $_POST['ratt'][$index] !== '') ? $_POST['ratt'][$index] : null;
         
         // Calcul des moyennes
         $moy1 = calculerMoyenne($t01, $t02, $participation, $note_cc, $exam);
