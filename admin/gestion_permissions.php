@@ -94,6 +94,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['permissions'])) {
 // Récupération données
 $profs = $db->query("SELECT id, nom, prenom FROM usto_users WHERE admin = 0")->fetchAll();
 $noteTypes = ['t01', 't02', 'participation', 'exam', 'ratt'];
+
+// Mapping des types de notes aux textes d'en-tête souhaités
+$noteTypeHeaders = [
+    't01' => 'Test 1 / 9 pts',
+    't02' => 'Test 2 / 9 pts',
+    'participation' => 'Note sur 2 pts',
+    'exam' => 'Examen / 20',
+    'ratt' => 'Rattrapage'
+];
+
 $stmt = $db->query("SELECT prof_id, note_type, can_view, can_edit FROM usto_prof_permissions");
 // Remove the first fetchAll and its debugging
 // $rawPermissionsData = $stmt->fetchAll();
@@ -151,7 +161,7 @@ error_log("Permissions Data Structure: " . print_r($permissionsData, true));
                                 <tr>
                                     <th class="sticky-col">Enseignant</th>
                                     <?php foreach ($noteTypes as $type): ?>
-                                        <th colspan="2" class="text-center header-<?= $type ?>" data-note-type="<?= $type ?>"><?= strtoupper($type) ?></th>
+                                        <th colspan="2" class="text-center header-<?= $type ?>" data-note-type="<?= $type ?>"><?= htmlspecialchars($noteTypeHeaders[$type] ?? strtoupper($type)) ?></th>
                                     <?php endforeach; ?>
                                 </tr>
                                 <tr>
