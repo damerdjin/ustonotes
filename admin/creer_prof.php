@@ -51,9 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col-md-12">
                 <h1>Administration - Création de Professeur</h1>
                 <nav class="nav nav-pills">
-                    <a class="nav-link" href="gerer_groupes.php">Groupes</a>
+                    <a class="nav-link" href="gestion.php">Gestion</a>
                     <a class="nav-link active" href="creer_prof.php">Professeurs</a>
-                    <a class="nav-link" href="import_etudiants.php">Étudiants</a>
+                    <a class="nav-link" href="etudiants.php">Étudiants</a>
                     <a class="nav-link" href="gestion_notes.php">Notes</a>
                     <a class="nav-link text-danger" href="../logout.php">Déconnexion</a>
                 </nav>

@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
             if ($encoding !== 'UTF-8') {
                 $content = mb_convert_encoding($content, 'UTF-8', $encoding);
             } else {
-                 // Ensure content is valid UTF-8, remove BOM if present
-                 $content = preg_replace('/^\xef\xbb\xbf/', '', $content);
+                // Ensure content is valid UTF-8, remove BOM if present
+                $content = preg_replace('/^\xef\xbb\xbf/', '', $content);
             }
 
             // Créer un flux temporaire avec le contenu converti
@@ -71,17 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 if (empty($row[0]) || count($row) < 4) continue;
 
                 $matricule = substr(trim($row[0]), 0, 20); // Limiter la longueur du matricule
-                
+
                 // Extraire uniquement la partie française du nom et prénom
                 $nom_complet = trim($row[1]);
                 $prenom_complet = trim($row[2]);
 
                 $nom_parts = explode('/', $nom_complet);
-                $nom = substr(trim($nom_parts[0]), 0, 50); 
+                $nom = substr(trim($nom_parts[0]), 0, 50);
 
                 $prenom_parts = explode('/', $prenom_complet);
-                $prenom = substr(trim($prenom_parts[0]), 0, 50); 
-                
+                $prenom = substr(trim($prenom_parts[0]), 0, 50);
+
                 $note = !empty($row[3]) ? number_format((float)str_replace(',', '.', $row[3]), 2, '.', '') : null;
 
                 // Récupérer la valeur complète de la dernière colonne (format: section1/groupe 1)
@@ -111,8 +111,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                     if ($note_type && $note !== null) {
                         $params[] = $note;
                     } else if ($note_type && $note === null) {
-                         // If note_type is set but note is null, insert null
-                         $params[] = null;
+                        // If note_type is set but note is null, insert null
+                        $params[] = null;
                     }
                     $params[] = $matricule;
 
@@ -130,8 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                     if ($note_type && $note !== null) {
                         $params[] = $note;
                     } else if ($note_type && $note === null) {
-                         // If note_type is set but note is null, insert null
-                         $params[] = null;
+                        // If note_type is set but note is null, insert null
+                        $params[] = null;
                     }
 
                     $stmt = $db->prepare($sql);
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 if ($erreurs > 0) {
                     $error .= " $erreurs erreur(s) rencontrée(s).";
                 } else {
-                     $error = "Aucune donnée valide trouvée dans le fichier CSV.";
+                    $error = "Aucune donnée valide trouvée dans le fichier CSV.";
                 }
             }
             $db->commit(); // Valider la transaction
@@ -173,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['groupe']) && isset($_
         $prof_id_to_set = $_POST['prof_id'] === '' ? null : $_POST['prof_id'];
         $stmt = $db->prepare("UPDATE usto_students SET id_prof = ? WHERE groupe = ?");
         $result = $stmt->execute([$prof_id_to_set, $_POST['groupe']]);
-        
+
         if ($result) {
             $success = "Professeur attribué au groupe avec succès";
         } else {
@@ -203,21 +203,23 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
 
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Importation et Gestion des Groupes</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body>
     <div class="container mt-4">
         <div class="row mb-4">
             <div class="col-md-12">
                 <h1>Administration - Importation et Gestion des Groupes</h1>
                 <nav class="nav nav-pills">
-                    <a class="nav-link" href="gerer_groupes.php">Groupes</a>
+                    <a class="nav-link active" href="gestion.php">Gestion</a>
                     <a class="nav-link" href="creer_prof.php">Professeurs</a>
-                    <a class="nav-link active" href="gestion.php">Étudiants & Groupes</a>
+                    <a class="nav-link " href="etudiants.php">Étudiants</a>
                     <a class="nav-link" href="gestion_notes.php">Notes</a>
                     <a class="nav-link text-danger" href="../logout.php">Déconnexion</a>
                 </nav>
@@ -233,98 +235,7 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
         <?php endif; ?>
 
         <div class="accordion" id="gestionAccordion">
-            <!-- Section Importation des étudiants -->
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="headingImport">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImport" aria-expanded="true" aria-controls="collapseImport">
-                        Importation des étudiants
-                    </button>
-                </h2>
-                <div id="collapseImport" class="accordion-collapse collapse show" aria-labelledby="headingImport" data-bs-parent="#gestionAccordion">
-                    <div class="accordion-body">
-                        <form method="POST" enctype="multipart/form-data">
-                            <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-                            <div class="mb-3">
-                                <label for="csv_file" class="form-label">Fichier CSV</label>
-                                <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
-                                <div class="form-text">Format attendu: Matricule, Nom, Prénom, Note (CC, Examen, Rattrapage, T01, T02, Participation), Groupe (séparés par des points-virgules)</div>
-                            </div>
-                             <div class="mb-3">
-                                <label for="note_type" class="form-label">Type de note à importer (optionnel)</label>
-                                <select name="note_type" id="note_type" class="form-select">
-                                    <option value="">-- Ne pas importer de note --</option>
-                                    <option value="note_cc">Note CC</option>
-                                    <option value="exam">Note Examen</option>
-                                    <option value="ratt">Note Rattrapage</option>
-                                    <option value="t01">Note T01</option>
-                                    <option value="t02">Note T02</option>
-                                    <option value="participation">Note Participation</option>
-                                </select>
-                                <div class="form-text">Sélectionnez le type de note si la 4ème colonne du CSV contient une note spécifique. Sinon, seuls les informations étudiant et groupe seront importés/mis à jour.</div>
-                            </div>
-                            <button type="submit" name="submit_import" class="btn btn-primary">Importer</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section Gestion des groupes -->
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="headingGestion">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGestion" aria-expanded="false" aria-controls="collapseGestion">
-                        Gestion des groupes
-                    </button>
-                </h2>
-                <div id="collapseGestion" class="accordion-collapse collapse" aria-labelledby="headingGestion" data-bs-parent="#gestionAccordion">
-                    <div class="accordion-body">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Nom du groupe</th>
-                                    <th>Professeur actuel</th>
-                                    <th>Attribuer à un professeur</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($groupes as $groupe): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($groupe['groupe']) ?></td>
-                                    <td>
-                                        <?php 
-                                        if (isset($groupe['id_prof']) && isset($profs_map[$groupe['id_prof']])) {
-                                            echo $profs_map[$groupe['id_prof']];
-                                        } else {
-                                            echo 'Non attribué';
-                                        }
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <form method="POST" class="d-flex">
-                                            <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-                                            <input type="hidden" name="groupe" value="<?= htmlspecialchars($groupe['groupe']) ?>">
-                                            <select name="prof_id" class="form-select form-select-sm me-2">
-                                                <option value="">-- Non attribué --</option>
-                                                <?php foreach ($profs as $prof): ?>
-                                                <option value="<?= $prof['id'] ?>" <?= (isset($groupe['id_prof']) && $prof['id'] == $groupe['id_prof']) ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($prof['nom'] . ' ' . $prof['prenom']) ?>
-                                                </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <button type="submit" class="btn btn-sm btn-primary">Attribuer</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                                <?php if (empty($groupes)): ?>
-                                <tr>
-                                    <td colspan="3" class="text-center">Aucun groupe trouvé</td>
-                                </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <!-- Section gestion Profs -->
             <div class="accordion-item">
                 <h2 class="accordion-header" id="headingProfesseurs">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProfesseurs" aria-expanded="false" aria-controls="collapseProfesseurs">
@@ -332,9 +243,58 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                     </button>
                 </h2>
                 <div id="collapseProfesseurs" class="accordion-collapse collapse" aria-labelledby="headingProfesseurs" data-bs-parent="#gestionAccordion">
+
                     <div class="accordion-body">
+
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">Liste des professeurs</div>
+                                    <div class="card-body">
+                                        <?php
+                                        $profs = $db->query("SELECT * FROM usto_users WHERE admin = 0 ORDER BY nom, prenom")->fetchAll();
+                                        if (count($profs) > 0):
+                                        ?>
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Nom</th>
+                                                        <th>Prénom</th>
+                                                        <th>Email</th>
+                                                        <th>Statut</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($profs as $prof): ?>
+                                                        <tr>
+                                                            <td><?= htmlspecialchars($prof['nom']) ?></td>
+                                                            <td><?= htmlspecialchars($prof['prenom']) ?></td>
+                                                            <td><?= htmlspecialchars($prof['email']) ?></td>
+                                                            <td>
+                                                                <?php if ($prof['activated'] == 1): ?>
+                                                                    <span class="badge bg-success">Actif</span>
+                                                                <?php else: ?>
+                                                                    <span class="badge bg-danger">Inactif</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td>
+                                                                <a href="?toggle=<?= $prof['id'] ?>" class="btn btn-sm btn-warning">
+                                                                    <?= $prof['activated'] == 1 ? 'Désactiver' : 'Activer' ?>
+                                                                </a>
+                                                                <a href="?reset=<?= $prof['id'] ?>" class="btn btn-sm btn-info">Réinitialiser MDP</a>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        <?php else: ?>
+                                            <div class="alert alert-info">Aucun professeur trouvé</div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="card">
                                     <div class="card-header">Ajouter un professeur</div>
                                     <div class="card-body">
@@ -356,67 +316,115 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">Liste des professeurs</div>
-                                    <div class="card-body">
-                                        <?php
-                                        $profs = $db->query("SELECT * FROM usto_users WHERE admin = 0 ORDER BY nom, prenom")->fetchAll();
-                                        if (count($profs) > 0):
-                                        ?>
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>Nom</th>
-                                                    <th>Prénom</th>
-                                                    <th>Email</th>
-                                                    <th>Statut</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($profs as $prof): ?>
-                                                <tr>
-                                                    <td><?= $prof['id'] ?></td>
-                                                    <td><?= htmlspecialchars($prof['nom']) ?></td>
-                                                    <td><?= htmlspecialchars($prof['prenom']) ?></td>
-                                                    <td><?= htmlspecialchars($prof['email']) ?></td>
-                                                    <td>
-                                                        <?php if ($prof['activated'] == 1): ?>
-                                                            <span class="badge bg-success">Actif</span>
-                                                        <?php else: ?>
-                                                            <span class="badge bg-danger">Inactif</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td>
-                                                        <a href="?toggle=<?= $prof['id'] ?>" class="btn btn-sm btn-warning">
-                                                            <?= $prof['activated'] == 1 ? 'Désactiver' : 'Activer' ?>
-                                                        </a>
-                                                        <a href="?reset=<?= $prof['id'] ?>" class="btn btn-sm btn-info">Réinitialiser MDP</a>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                        <?php else: ?>
-                                            <div class="alert alert-info">Aucun professeur trouvé</div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
+
                         </div>
                     </div>
                 </div>
             </div>
+                        <!-- Section Gestion des groupes -->
+                        <div class="accordion-item">
+                <h2 class="accordion-header" id="headingGestion">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGestion" aria-expanded="false" aria-controls="collapseGestion">
+                        Gestion des groupes
+                    </button>
+                </h2>
+                <div id="collapseGestion" class="accordion-collapse collapse" aria-labelledby="headingGestion" data-bs-parent="#gestionAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nom du groupe</th>
+                                    <th>Professeur actuel</th>
+                                    <th>Attribuer à un professeur</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($groupes as $groupe): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($groupe['groupe']) ?></td>
+                                        <td>
+                                            <?php
+                                            if (isset($groupe['id_prof']) && isset($profs_map[$groupe['id_prof']])) {
+                                                echo $profs_map[$groupe['id_prof']];
+                                            } else {
+                                                echo 'Non attribué';
+                                            }
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <form method="POST" class="d-flex">
+                                                <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+                                                <input type="hidden" name="groupe" value="<?= htmlspecialchars($groupe['groupe']) ?>">
+                                                <select name="prof_id" class="form-select form-select-sm me-2">
+                                                    <option value="">-- Non attribué --</option>
+                                                    <?php foreach ($profs as $prof): ?>
+                                                        <option value="<?= $prof['id'] ?>" <?= (isset($groupe['id_prof']) && $prof['id'] == $groupe['id_prof']) ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($prof['nom'] . ' ' . $prof['prenom']) ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-primary">Attribuer</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if (empty($groupes)): ?>
+                                    <tr>
+                                        <td colspan="3" class="text-center">Aucun groupe trouvé</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Section Importation des étudiants -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingImport">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImport" aria-expanded="true" aria-controls="collapseImport">
+                        Importation des étudiants
+                    </button>
+                </h2>
+                <div id="collapseImport" class="accordion-collapse collapse show" aria-labelledby="headingImport" data-bs-parent="#gestionAccordion">
+                    <div class="accordion-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+                            <div class="mb-3">
+                                <label for="csv_file" class="form-label">Fichier CSV</label>
+                                <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
+                                <div class="form-text">Format attendu: Matricule, Nom, Prénom, Note (CC, Examen, Rattrapage, T01, T02, Participation), Groupe (séparés par des points-virgules)</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="note_type" class="form-label">Type de note à importer (optionnel)</label>
+                                <select name="note_type" id="note_type" class="form-select">
+                                    <option value="">-- Ne pas importer de note --</option>
+                                    <option value="note_cc">Note CC</option>
+                                    <option value="exam">Note Examen</option>
+                                    <option value="ratt">Note Rattrapage</option>
+                                    <option value="t01">Note T01</option>
+                                    <option value="t02">Note T02</option>
+                                    <option value="participation">Note Participation</option>
+                                </select>
+                                <div class="form-text">Sélectionnez le type de note si la 4ème colonne du CSV contient une note spécifique. Sinon, seuls les informations étudiant et groupe seront importés/mis à jour.</div>
+                            </div>
+                            <button type="submit" name="submit_import" class="btn btn-primary">Importer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</html>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
