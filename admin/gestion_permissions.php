@@ -223,6 +223,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const checkboxes = document.querySelectorAll(`input[name^="permissions"][name$="[${noteType}][view]"]`);
             checkboxes.forEach(checkbox => {
                 checkbox.checked = !checkbox.checked;
+                // If 'Voir' is turned OFF, turn OFF 'Modifier' in the same row
+                if (!checkbox.checked) {
+                    const editCheckboxId = checkbox.id.replace('view-', 'edit-');
+                    const editCheckbox = document.getElementById(editCheckboxId);
+                    if (editCheckbox && editCheckbox.checked) {
+                        editCheckbox.checked = false;
+                    }
+                }
             });
         });
     });
@@ -242,6 +250,43 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // Add event listeners for individual 'Voir' checkboxes
+    const individualViewCheckboxes = document.querySelectorAll('input[name^="permissions"][name$="[view]"]');
+    individualViewCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            console.log('Individual View checkbox changed:', this.id, 'Checked:', this.checked); // Debugging log
+            // If 'Voir' is turned OFF, turn OFF 'Modifier' in the same row
+            if (!this.checked) {
+                const editCheckboxId = this.id.replace('view-', 'edit-');
+                const editCheckbox = document.getElementById(editCheckboxId);
+                if (editCheckbox && editCheckbox.checked) {
+                    console.log('Unchecking corresponding Edit checkbox:', editCheckbox.id); // Debugging log
+                    editCheckbox.checked = false;
+                }
+            }
+        });
+    });
+
+    // Add event listeners for individual 'Modifier' checkboxes to disable if 'Voir' is off
+    const individualEditCheckboxes = document.querySelectorAll('input[name^="permissions"][name$="[edit]"]');
+    individualEditCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // If 'Modifier' is turned ON, ensure 'Voir' is ON
+            if (this.checked) {
+                const viewCheckboxId = this.id.replace('edit-', 'view-');
+                const viewCheckbox = document.getElementById(viewCheckboxId);
+                if (viewCheckbox && !viewCheckbox.checked) {
+                    // This scenario should ideally not happen with the 'Voir' listener,
+                    // but as a safeguard, we could potentially re-check 'Voir' or prevent 'Modifier' from being checked.
+                    // For now, we'll rely on the 'Voir' listener to handle the dependency.
+                }
+            } else {
+                 // If 'Modifier' is turned OFF, no action needed regarding 'Voir'
+            }
+        });
+    });
+
 });
 </script>
 </body>
