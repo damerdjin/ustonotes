@@ -151,14 +151,14 @@ error_log("Permissions Data Structure: " . print_r($permissionsData, true));
                                 <tr>
                                     <th class="sticky-col">Enseignant</th>
                                     <?php foreach ($noteTypes as $type): ?>
-                                        <th colspan="2" class="text-center"><?= strtoupper($type) ?></th>
+                                        <th colspan="2" class="text-center header-<?= $type ?>" data-note-type="<?= $type ?>"><?= strtoupper($type) ?></th>
                                     <?php endforeach; ?>
                                 </tr>
                                 <tr>
                                     <th class="sticky-col"></th>
                                     <?php foreach ($noteTypes as $type): ?>
-                                        <th class="text-center small">Voir</th>
-                                        <th class="text-center small">Modifier</th>
+                                        <th class="text-center small header-view" data-note-type="<?= $type ?>">Voir</th>
+                                        <th class="text-center small header-edit" data-note-type="<?= $type ?>">Modifier</th>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
@@ -212,75 +212,37 @@ error_log("Permissions Data Structure: " . print_r($permissionsData, true));
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const viewCheckboxes = document.querySelectorAll('input[name^="permissions"][name$="[view]"]');
-            const editCheckboxes = document.querySelectorAll('input[name^="permissions"][name$="[edit]"]');
+document.addEventListener('DOMContentLoaded', function() {
+    const viewHeaders = document.querySelectorAll('.header-view');
+    const editHeaders = document.querySelectorAll('.header-edit');
 
-            viewCheckboxes.forEach(viewCheckbox => {
-                viewCheckbox.addEventListener('change', function() {
-                    console.log('View checkbox changed:', this.name, 'Checked:', this.checked); // Debugging line
-                    const parts = this.name.match(/permissions\[(\d+)\]\[(.+)\]\[view\]/);
-                    if (parts && parts[1] && parts[2]) {
-                        const profId = parts[1];
-                        const noteType = parts[2];
-                        const editCheckbox = document.getElementById(`edit-${profId}-${noteType}`);
-                        if (editCheckbox) {
-                            if (this.checked) {
-                                editCheckbox.disabled = false;
-                            } else {
-                                editCheckbox.checked = false;
-                                editCheckbox.disabled = true;
-                            }
-                        }
-                    }
-                });
-            });
-
-            // Initial state check on page load
-            viewCheckboxes.forEach(viewCheckbox => {
-                 const parts = viewCheckbox.name.match(/permissions\[(\d+)\]\[(.+)\]\[view\]/);
-                 if (parts && parts[1] && parts[2]) {
-                     const profId = parts[1];
-                     const noteType = parts[2];
-                     const editCheckbox = document.getElementById(`edit-${profId}-${noteType}`);
-                     if (editCheckbox) {
-                         if (!viewCheckbox.checked) {
-                             editCheckbox.checked = false;
-                             editCheckbox.disabled = true;
-                         }
-                     }
-                 }
-            });
-
-            // Add logic for "Tout Voir" and "Tout Modifier" buttons
-            const toggleAllViewButton = document.getElementById('toggle-all-view');
-            const toggleAllEditButton = document.getElementById('toggle-all-edit');
-
-            toggleAllViewButton.addEventListener('click', function() {
-                const allChecked = Array.from(viewCheckboxes).every(cb => cb.checked);
-                viewCheckboxes.forEach(cb => {
-                    cb.checked = !allChecked;
-                    // Trigger change event to update corresponding edit checkbox state
-                    cb.dispatchEvent(new Event('change'));
-                });
-            });
-
-            toggleAllEditButton.addEventListener('click', function() {
-                // Only toggle edit if the corresponding view is checked
-                const allChecked = Array.from(editCheckboxes).every(cb => cb.checked || cb.disabled);
-                editCheckboxes.forEach(editCheckbox => {
-                    const parts = editCheckbox.name.match(/permissions\[(\d+)\]\[(.+)\]\[edit\]/);
-                    if (parts && parts[1] && parts[2]) {
-                        const profId = parts[1];
-                        const noteType = parts[2];
-                        const viewCheckbox = document.getElementById(`view-${profId}-${noteType}`);
-                        if (viewCheckbox && viewCheckbox.checked) {
-                             editCheckbox.checked = !allChecked;
-                        }
-                    }
-                });
+    viewHeaders.forEach(header => {
+        header.style.cursor = 'pointer'; // Indicate clickable
+        header.addEventListener('click', function() {
+            const noteType = this.getAttribute('data-note-type');
+            const checkboxes = document.querySelectorAll(`input[name^="permissions"][name$="[${noteType}][view]"]`);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !checkbox.checked;
             });
         });
-    </script>
+    });
+
+    editHeaders.forEach(header => {
+        header.style.cursor = 'pointer'; // Indicate clickable
+        header.addEventListener('click', function() {
+            const noteType = this.getAttribute('data-note-type');
+            const checkboxes = document.querySelectorAll(`input[name^="permissions"][name$="[${noteType}][edit]"]`);
+            checkboxes.forEach(checkbox => {
+                // Only toggle if the corresponding 'Voir' checkbox is checked
+                const viewCheckboxId = checkbox.id.replace('edit-', 'view-');
+                const viewCheckbox = document.getElementById(viewCheckboxId);
+                if (viewCheckbox && viewCheckbox.checked) {
+                     checkbox.checked = !checkbox.checked;
+                }
+            });
+        });
+    });
+});
+</script>
 </body>
 </html>
