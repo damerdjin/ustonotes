@@ -22,10 +22,15 @@ $professeurs = $stmt->fetchAll();
 
 // Traitement du formulaire d'importation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
+    $allowed_note_types = ['note_cc', 'exam', 'ratt', 't01', 't02', 'participation'];
     $note_type = $_POST['note_type'] ?? '';
 
-    if (!empty($_FILES['csv_file']['tmp_name'])) {
+    if ($note_type !== '' && !in_array($note_type, $allowed_note_types)) {
+        $error = "Type de note invalide sélectionné.";
+    } elseif (!empty($_FILES['csv_file']['tmp_name'])) {
         try {
+            $db->beginTransaction(); // Démarrer la transaction
+
             // Ouvrir le fichier en mode UTF-8
             setlocale(LC_ALL, 'fr_FR.UTF-8');
             $content = file_get_contents($_FILES['csv_file']['tmp_name']);
@@ -53,6 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
             $importes = 0;
             $erreurs = 0;
 
+            // Optimisation: Récupérer les matricules existants en une seule fois
+            $stmt_all_matricules = $db->query("SELECT matricule, id FROM usto_students");
+            $existing_students_data = $stmt_all_matricules->fetchAll(PDO::FETCH_KEY_PAIR); // matricule => id
+
             while (($row = fgetcsv($handle, 0, ";")) !== false) {
                 if (empty($row[0])) continue;
 
@@ -77,9 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 }
 
                 // Vérifier si l'étudiant existe
-                $check = $db->prepare("SELECT id FROM usto_students WHERE matricule = ?");
-                $check->execute([$matricule]);
-                $etudiant_id = $check->fetchColumn();
+                // $check = $db->prepare("SELECT id FROM usto_students WHERE matricule = ?"); // Ancienne méthode
+                // $check->execute([$matricule]); // Ancienne méthode
+                // $etudiant_id = $check->fetchColumn(); // Ancienne méthode
+                $etudiant_id = $existing_students_data[$matricule] ?? null;
 
                 if ($etudiant_id) {
                     // Mise à jour de l'étudiant existant
@@ -123,9 +133,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 $success = "$importes étudiant(s) importé(s) avec succès. $erreurs erreur(s) rencontrée(s).";
             } else {
                 $error = "Aucun étudiant n'a été importé. Vérifiez le format des données.";
+                if ($erreurs > 0) {
+                    $error .= " $erreurs erreur(s) rencontrée(s).";
+                }
             }
+            $db->commit(); // Valider la transaction
         } catch (Exception $e) {
-            $error = "Erreur lors de l'importation du fichier: " . $e->getMessage();
+            if ($db->inTransaction()) {
+                $db->rollBack(); // Annuler la transaction en cas d'erreur
+            }
+            $error = "Erreur lors de l'importation du fichier: " . htmlspecialchars($e->getMessage());
         }
     } else {
         $error = "Veuillez sélectionner un fichier CSV à importer.";
