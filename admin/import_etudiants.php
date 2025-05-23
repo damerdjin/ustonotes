@@ -66,9 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
                 if (empty($row[0])) continue;
 
                 $matricule = substr(trim($row[0]), 0, 20); // Limiter la longueur du matricule
-                $nom = substr(trim($row[1]), 0, 50); // Limiter la longueur du nom
-                $prenom = substr(trim($row[2]), 0, 50); // Limiter la longueur du prénom
-                $note = !empty($row[3]) ? number_format((float)$row[3], 2, '.', '') : null;
+                
+                // Extraire uniquement la partie française du nom et prénom
+                $nom_complet = trim($row[1]);
+                $prenom_complet = trim($row[2]);
+
+                $nom_parts = explode('/', $nom_complet);
+                $nom = substr(trim($nom_parts[0]), 0, 50); 
+
+                $prenom_parts = explode('/', $prenom_complet);
+                $prenom = substr(trim($prenom_parts[0]), 0, 50); 
+                
+                $note = !empty($row[3]) ? number_format((float)str_replace(',', '.', $row[3]), 2, '.', '') : null;
 
                 // Récupérer la valeur complète de la dernière colonne (format: section1/groupe 1)
                 $groupe = trim(end($row));
