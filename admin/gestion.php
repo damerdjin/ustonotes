@@ -23,8 +23,37 @@ $db->exec("SET NAMES utf8mb4");
 $db->exec("SET CHARACTER SET utf8mb4");
 $db->exec("SET collation_connection = utf8mb4_unicode_ci");
 
-$allowed_note_types = ['note_cc', 'exam', 'ratt', 't01', 't02', 'participation'];
+// Fetch note types where 'can_edit' is true for ALL non-admin professors
+$stmt_prof_count = $db->query("SELECT COUNT(id) FROM usto_users WHERE admin = 0 AND activated = 1");
+$total_active_profs = $stmt_prof_count->fetchColumn();
+
+$stmt_allowed_note_types = $db->prepare("
+    SELECT upp.note_type
+    FROM usto_prof_permissions upp
+    JOIN usto_users u ON upp.prof_id = u.id
+    WHERE u.admin = 0 AND u.activated = 1 AND upp.can_edit = 1
+    GROUP BY upp.note_type
+    HAVING COUNT(DISTINCT upp.prof_id) = ?
+");
+$stmt_allowed_note_types->execute([$total_active_profs]);
+$allowed_note_types_from_db = $stmt_allowed_note_types->fetchAll(PDO::FETCH_COLUMN);
+
+// Add 'note_cc' as it's a general type not tied to specific professor permissions
+// Also add an empty option for 'Do not import note'
+$allowed_note_types_for_select = array_merge([''], $allowed_note_types_from_db);
+
 $note_type = $_POST['note_type'] ?? '';
+
+// Mapping for display names (can be expanded)
+$note_type_display_names = [
+    '' => '-- Ne pas importer de note --',
+    'note_cc' => 'Note CC',
+    'exam' => 'Note Examen',
+    'ratt' => 'Note Rattrapage',
+    't01' => 'Note T01',
+    't02' => 'Note T02',
+    'participation' => 'Note Participation'
+];
 
 // Traitement de l'importation des étudiants
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
@@ -398,13 +427,12 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                             <div class="mb-3">
                                 <label for="note_type" class="form-label">Type de note à importer (optionnel)</label>
                                 <select name="note_type" id="note_type" class="form-select">
-                                    <option value="">-- Ne pas importer de note --</option>
-                                    <option value="note_cc">Note CC</option>
-                                    <option value="exam">Note Examen</option>
-                                    <option value="ratt">Note Rattrapage</option>
-                                    <option value="t01">Note T01</option>
-                                    <option value="t02">Note T02</option>
-                                    <option value="participation">Note Participation</option>
+                                    <?php foreach ($allowed_note_types_for_select as $type_value): ?>
+                                        <option value="<?= htmlspecialchars($type_value) ?>"
+                                            <?= ($note_type === $type_value) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($note_type_display_names[$type_value] ?? $type_value) ?>
+                                        </option>
+                                    <?php endforeach; ?>
                                 </select>
                                 <div class="form-text">Sélectionnez le type de note si la 4ème colonne du CSV contient une note spécifique. Sinon, seuls les informations étudiant et groupe seront importés/mis à jour.</div>
                             </div>
