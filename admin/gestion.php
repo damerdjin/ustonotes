@@ -242,7 +242,7 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                         Gestion des professeurs
                     </button>
                 </h2>
-                <div id="collapseProfesseurs" class="accordion-collapse collapse" aria-labelledby="headingProfesseurs" data-bs-parent="#gestionAccordion">
+                <div id="collapseProfesseurs" class="accordion-collapse collapse show" aria-labelledby="headingProfesseurs" data-bs-parent="#gestionAccordion">
 
                     <div class="accordion-body">
 
@@ -321,14 +321,14 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                     </div>
                 </div>
             </div>
-                        <!-- Section Gestion des groupes -->
-                        <div class="accordion-item">
+            <!-- Section Gestion des groupes -->
+            <div class="accordion-item">
                 <h2 class="accordion-header" id="headingGestion">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGestion" aria-expanded="false" aria-controls="collapseGestion">
                         Gestion des groupes
                     </button>
                 </h2>
-                <div id="collapseGestion" class="accordion-collapse collapse" aria-labelledby="headingGestion" data-bs-parent="#gestionAccordion">
+                <div id="collapseGestion" class="accordion-collapse collapse " aria-labelledby="headingGestion" data-bs-parent="#gestionAccordion">
                     <div class="accordion-body">
                         <table class="table table-striped">
                             <thead>
@@ -385,7 +385,7 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                         Importation des étudiants
                     </button>
                 </h2>
-                <div id="collapseImport" class="accordion-collapse collapse show" aria-labelledby="headingImport" data-bs-parent="#gestionAccordion">
+                <div id="collapseImport" class="accordion-collapse collapse " aria-labelledby="headingImport" data-bs-parent="#gestionAccordion">
                     <div class="accordion-body">
                         <form method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
