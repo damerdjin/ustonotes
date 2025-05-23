@@ -29,6 +29,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['permissions'])) {
     $db->beginTransaction();
 }
         try {
+            // Server-side validation: Enforce the 'Modifier' permission rules across all professors.
+            // Rules:
+            // - Only one non-exception type (t01, exam, ratt) can be ON across all professors.
+            // - t02 and participation can be ON simultaneously across all professors.
+            // - A non-exception type cannot be ON at the same time as t02 or participation across all professors.
+
+            $allEditEnabledNoteTypes = [];
+            foreach ($_POST['permissions'] as $profId => $permissions) {
+                foreach ($permissions as $noteType => $settings) {
+                    if (isset($settings['edit'])) { // Check if the 'edit' key exists (checkbox was checked)
+                         if (!in_array($noteType, $allEditEnabledNoteTypes)) {
+                             $allEditEnabledNoteTypes[] = $noteType;
+                         }
+                    }
+                }
+            }
+
+            $exceptionTypes = ['t02', 'participation'];
+            $nonExceptionTypes = array_diff($allEditEnabledNoteTypes, $exceptionTypes);
+            $enabledExceptions = array_intersect($allEditEnabledNoteTypes, $exceptionTypes);
+
+            // Rule 1: Only one non-exception type can be ON across all professors.
+            if (count($nonExceptionTypes) > 1) {
+                throw new Exception("Erreur: Seul un type de note (T01, Exam, Ratt) peut avoir la permission 'Modifier' activée à la fois pour tous les professeurs.");
+            }
+
+            // Rule 3: A non-exception type cannot be ON at the same time as t02 or participation across all professors.
+            if (count($nonExceptionTypes) >= 1 && count($enabledExceptions) >= 1) {
+                 throw new Exception("Erreur: Un type de note (T01, Exam, Ratt) ne peut pas être activé en même temps que T02 ou Participation pour tous les professeurs.");
+            }
+
+            // Rule 2: t02 and participation can be ON simultaneously across all professors (implicitly allowed if Rule 3 is not triggered and count($nonExceptionTypes) is 0)
+
+            // If validation passes, proceed with database update
             $db->exec("DELETE FROM usto_prof_permissions");
             foreach ($_POST['permissions'] as $profId => $permissions) {
                 foreach ($permissions as $noteType => $settings) {
