@@ -190,6 +190,9 @@ $etudiants = $stmt->fetchAll();
                         <?php else: ?>
                             <div class="alert alert-info">Aucun étudiant trouvé</div>
                         <?php endif; ?>
+                        <div class="mt-3">
+                            <button class="btn btn-success" onclick="exportToExcel()">Exporter en Excel</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -198,6 +201,41 @@ $etudiants = $stmt->fetchAll();
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        const studentData = <?php echo json_encode($etudiants); ?>;
+        const noteColumnsMapping = <?php echo json_encode($note_columns); ?>;
+
+        function exportToExcel() {
+             const selectedColumns = Array.from(document.querySelectorAll('input[name="columns[]"]:checked')).map(c => c.value);
+             if (selectedColumns.length > 1) {
+                 alert('Veuillez sélectionner une seule colonne de notes pour l\'export.');
+                 return;
+             }
+
+             const filterGroupeSelect = document.querySelector('select[name="filter_groupe"]');
+             const groupe = filterGroupeSelect.options[filterGroupeSelect.selectedIndex].text || 'tous';
+             const noteKey = selectedColumns[0] || 'note';
+             const noteLabel = noteColumnsMapping[noteKey] || 'Note';
+
+             const data = [['Matricule', 'Nom', 'Prénom', 'Note', 'Groupe']];
+             data.unshift([]); // Add an empty array at the beginning
+
+             studentData.forEach(student => {
+                 const matricule = student.matricule;
+                 const nom = student.nom;
+                 const prenom = student.prenom;
+                 const studentGroupe = student.groupe;
+                 const noteValue = student[noteKey] !== null ? `${parseFloat(student[noteKey]).toFixed(2)}` : 'Non évalué';
+                 data.push([matricule, nom, prenom, noteValue, studentGroupe]);
+             });
+
+             const ws = XLSX.utils.aoa_to_sheet(data);
+             const wb = XLSX.utils.book_new();
+             XLSX.utils.book_append_sheet(wb, ws, 'Etudiants');
+             XLSX.writeFile(wb, `${groupe}_${noteKey}.xlsx`);
+         }
+    </script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap5.min.css">
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
