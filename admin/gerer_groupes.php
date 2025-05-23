@@ -3,19 +3,37 @@ require_once '../includes/config.php';
 require_once '../includes/functions.php';
 require_admin();
 
+// Start session if not already started for CSRF token
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
 $success = null;
 $error = null;
 
+// Generate CSRF token if not exists
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION['csrf_token'];
+
 // Traitement de l'attribution d'un professeur à un groupe
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['groupe']) && isset($_POST['prof_id'])) {
-    $stmt = $db->prepare("UPDATE usto_students SET id_prof = ? WHERE groupe = ?");
-    $result = $stmt->execute([$_POST['prof_id'], $_POST['groupe']]);
-    
-    if ($result) {
-        $success = "Professeur attribué au groupe avec succès";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['groupe']) && isset($_POST['prof_id']) && isset($_POST['csrf_token'])) {
+    if (hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $prof_id_to_set = $_POST['prof_id'] === '' ? null : $_POST['prof_id'];
+        $stmt = $db->prepare("UPDATE usto_students SET id_prof = ? WHERE groupe = ?");
+        $result = $stmt->execute([$prof_id_to_set, $_POST['groupe']]);
+        
+        if ($result) {
+            $success = "Professeur attribué au groupe avec succès";
+        } else {
+            $error = "Erreur lors de l'attribution du professeur au groupe";
+        }
     } else {
-        $error = "Erreur lors de l'attribution du professeur au groupe";
+        $error = "Erreur de validation CSRF.";
     }
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $error = "Données de formulaire invalides.";
 }
 
 // Récupération des groupes uniques depuis la table usto_students
@@ -23,8 +41,13 @@ $stmt = $db->query("SELECT DISTINCT groupe, id_prof FROM usto_students WHERE gro
 $groupes = $stmt->fetchAll();
 
 // Récupération des professeurs
-$stmt = $db->query("SELECT * FROM usto_users WHERE admin = 0 AND activated = 1 ORDER BY nom, prenom");
-$profs = $stmt->fetchAll();
+$stmt_profs = $db->query("SELECT id, nom, prenom FROM usto_users WHERE admin = 0 AND activated = 1 ORDER BY nom, prenom");
+$profs_raw = $stmt_profs->fetchAll();
+$profs_map = [];
+foreach ($profs_raw as $p) {
+    $profs_map[$p['id']] = htmlspecialchars($p['nom'] . ' ' . $p['prenom']);
+}
+$profs = $profs_raw; // Garder $profs pour la liste déroulante
 ?>
 
 <!DOCTYPE html>
@@ -81,23 +104,21 @@ $profs = $stmt->fetchAll();
                                     <td><?= htmlspecialchars($groupe['groupe']) ?></td>
                                     <td>
                                         <?php 
-                                        $prof_name = 'Non attribué';
-                                        foreach ($profs as $prof) {
-                                            if ($prof['id'] == $groupe['id_prof']) {
-                                                $prof_name = htmlspecialchars($prof['nom'] . ' ' . $prof['prenom']);
-                                                break;
-                                            }
+                                        if (isset($groupe['id_prof']) && isset($profs_map[$groupe['id_prof']])) {
+                                            echo $profs_map[$groupe['id_prof']];
+                                        } else {
+                                            echo 'Non attribué';
                                         }
-                                        echo $prof_name;
                                         ?>
                                     </td>
                                     <td>
                                         <form method="POST" class="d-flex">
+                                            <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
                                             <input type="hidden" name="groupe" value="<?= htmlspecialchars($groupe['groupe']) ?>">
                                             <select name="prof_id" class="form-select form-select-sm me-2">
-                                                <option value="">Choisir un professeur</option>
+                                                <option value="">-- Non attribué --</option> <!-- Option pour désattribuer -->
                                                 <?php foreach ($profs as $prof): ?>
-                                                <option value="<?= $prof['id'] ?>" <?= ($prof['id'] == $groupe['id_prof']) ? 'selected' : '' ?>>
+                                                <option value="<?= $prof['id'] ?>" <?= (isset($groupe['id_prof']) && $prof['id'] == $groupe['id_prof']) ? 'selected' : '' ?>>
                                                     <?= htmlspecialchars($prof['nom'] . ' ' . $prof['prenom']) ?>
                                                 </option>
                                                 <?php endforeach; ?>
