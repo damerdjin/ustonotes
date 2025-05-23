@@ -172,13 +172,13 @@ if ($groupe) {
                                                 <th>Prénom</th>
                                                 <?php
                                                 $note_types = [
-                                                    't01' => ['label' => 'T01', 'field' => 't01'],
-                                                    't02' => ['label' => 'T02', 'field' => 't02'],
-                                                    'participation' => ['label' => 'Participation', 'field' => 'participation'],
+                                                    't01' => ['label' => 'Test 1 / 9 pts', 'field' => 't01'],
+                                                    't02' => ['label' => 'Test 2 / 9 pts', 'field' => 't02'],
+                                                    'participation' => ['label' => 'Note sur 2 pts', 'field' => 'participation'],
                                                     'note_cc' => ['label' => 'Note CC', 'field' => 'note_cc'],
-                                                    'exam' => ['label' => 'Examen', 'field' => 'exam'],
+                                                    'exam' => ['label' => 'Examen / 20', 'field' => 'exam'],
                                                     'moy1' => ['label' => 'Moyenne', 'field' => 'moy1', 'calculated' => true],
-                                                    'ratt' => ['label' => 'Rattrapage', 'field' => 'ratt'],
+                                                    'ratt' => ['label' => 'Rattrapage / 20', 'field' => 'ratt'],
                                                     'moy2' => ['label' => 'Moyenne Finale', 'field' => 'moy2', 'calculated' => true]
                                                 ];
 

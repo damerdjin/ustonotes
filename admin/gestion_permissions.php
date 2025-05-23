@@ -101,7 +101,7 @@ $noteTypeHeaders = [
     't02' => 'Test 2 / 9 pts',
     'participation' => 'Note sur 2 pts',
     'exam' => 'Examen / 20',
-    'ratt' => 'Rattrapage'
+    'ratt' => 'Rattrapage / 20'
 ];
 
 $stmt = $db->query("SELECT prof_id, note_type, can_view, can_edit FROM usto_prof_permissions");
