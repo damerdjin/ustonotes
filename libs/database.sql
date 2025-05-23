@@ -30,3 +30,13 @@ CREATE TABLE usto_users (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE usto_prof_permissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    prof_id INT NOT NULL,
+    note_type VARCHAR(20) NOT NULL,
+    can_view BOOLEAN DEFAULT 1,
+    can_edit BOOLEAN DEFAULT 0,
+    FOREIGN KEY (prof_id) REFERENCES usto_users(id),
+    UNIQUE(prof_id, note_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

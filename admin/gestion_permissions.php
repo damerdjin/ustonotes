@@ -1,0 +1,252 @@
+<?php
+require_once '../includes/config.php';
+require_once '../includes/functions.php';
+require_admin();
+
+// Création table permissions si inexistante
+$db->exec("CREATE TABLE IF NOT EXISTS usto_prof_permissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    prof_id INT NOT NULL,
+    note_type VARCHAR(20) NOT NULL,
+    can_view BOOLEAN DEFAULT 1,
+    can_edit BOOLEAN DEFAULT 0,
+    FOREIGN KEY (prof_id) REFERENCES usto_users(id),
+    UNIQUE(prof_id, note_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+error_log("Full POST data: " . print_r($_POST, true));
+error_log("Received permissions datas: " . print_r($_POST['permissions'], true));
+
+// Traitement formulaire
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['permissions'])) {
+    // Debugging: Log the received permissions data
+    error_log("Received permissions data: " . print_r($_POST['permissions'], true));
+
+    try {
+        if (!$db->inTransaction()) {
+    $db->beginTransaction();
+}
+        if (!$db->inTransaction()) {
+    $db->beginTransaction();
+}
+        try {
+            $db->exec("DELETE FROM usto_prof_permissions");
+            foreach ($_POST['permissions'] as $profId => $permissions) {
+                foreach ($permissions as $noteType => $settings) {
+                    $stmt = $db->prepare("INSERT INTO usto_prof_permissions 
+                        (prof_id, note_type, can_view, can_edit)
+                        VALUES (?, ?, ?, ?)");
+                    $stmt->execute([
+                        $profId,
+                        $noteType,
+                        isset($settings['view']) ? 1 : 0,
+                        isset($settings['edit']) ? 1 : 0
+                    ]);
+                }
+            }
+            if ($db->inTransaction()) {
+    $db->commit();
+}
+        } catch (Exception $e) {
+            $db->rollBack();
+            $error = "Erreur lors de la mise à jour: " . $e->getMessage();
+        }
+        $success = "Permissions mises à jour avec succès!";
+    } catch (Exception $e) {
+        $db->rollBack();
+        $error = "Erreur lors de la mise à jour: " . $e->getMessage();
+    }
+}
+
+// Récupération données
+$profs = $db->query("SELECT id, nom, prenom FROM usto_users WHERE admin = 0")->fetchAll();
+$noteTypes = ['t01', 't02', 'participation', 'exam', 'ratt'];
+$stmt = $db->query("SELECT prof_id, note_type, can_view, can_edit FROM usto_prof_permissions");
+// Remove the first fetchAll and its debugging
+// $rawPermissionsData = $stmt->fetchAll();
+// error_log("Raw Permissions Data: " . print_r($rawPermissionsData, true));
+
+// Fetch data once and process it manually
+$fetchedPermissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$permissionsData = [];
+foreach ($fetchedPermissions as $permission) {
+    $permissionsData[$permission['prof_id']][$permission['note_type']] = [
+        'can_view' => $permission['can_view'],
+        'can_edit' => $permission['can_edit']
+    ];
+}
+
+// Debugging: Check the structure of $permissionsData
+error_log("Permissions Data Structure: " . print_r($permissionsData, true));
+
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Permissions</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 1;
+        }
+        .table-responsive {
+            max-height: 70vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <?php include '../includes/alerts.php'; ?>
+
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Gestion des Permissions</h3>
+            </div>
+            
+            <div class="card-body">
+                <form method="POST">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="sticky-top bg-light">
+                                <tr>
+                                    <th class="sticky-col">Enseignant</th>
+                                    <?php foreach ($noteTypes as $type): ?>
+                                        <th colspan="2" class="text-center"><?= strtoupper($type) ?></th>
+                                    <?php endforeach; ?>
+                                </tr>
+                                <tr>
+                                    <th class="sticky-col"></th>
+                                    <?php foreach ($noteTypes as $type): ?>
+                                        <th class="text-center small">Voir</th>
+                                        <th class="text-center small">Modifier</th>
+                                    <?php endforeach; ?>
+                                </tr>
+                            </thead>
+                            
+                            <tbody>
+                                <?php foreach ($profs as $prof): ?>
+                                <tr>
+                                    <td class="sticky-col fw-bold">
+                                        <?= htmlspecialchars($prof['prenom'] . ' ' . $prof['nom']) ?>
+                                    </td>
+                                    
+                                    <?php foreach ($noteTypes as $type): 
+                                        // Debugging: Check the type and value of keys
+                                        error_log("Accessing permissionsData with Prof ID: " . $prof['id'] . " (Type: " . gettype($prof['id']) . ") and Note Type: " . $type . " (Type: " . gettype($type) . ")");
+                                        $perm = $permissionsData[$prof['id']][$type] ?? ['can_view' => 0, 'can_edit' => 0];
+                                        // Debugging output
+                                        error_log("Prof ID: " . $prof['id'] . ", Note Type: " . $type . ", Permissions: " . print_r($perm, true));
+                                    ?>
+                                        <td class="text-center align-middle">
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="permissions[<?= $prof['id'] ?>][<?= $type ?>][view]"
+                                                    id="view-<?= $prof['id'] ?>-<?= $type ?>"
+                                                    <?= $perm['can_view'] ? 'checked' : '' ?>>
+                                            </div>
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="permissions[<?= $prof['id'] ?>][<?= $type ?>][edit]"
+                                                    id="edit-<?= $prof['id'] ?>-<?= $type ?>"
+                                                    <?= $perm['can_edit'] ? 'checked' : '' ?>
+                                                    <?= $perm['can_view'] ? '' : 'disabled' ?>>
+                                            </div>
+                                        </td>
+                                    <?php endforeach; ?>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-3">
+                        <button type="button" class="btn btn-secondary" id="toggle-all-view">Tout Voir</button>
+                        <button type="button" class="btn btn-secondary" id="toggle-all-edit">Tout Modifier</button>
+                        <button type="submit" class="btn btn-success">Sauvegarder les Permissions</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const viewCheckboxes = document.querySelectorAll('input[name^="permissions"][name$="[view]"]');
+            const editCheckboxes = document.querySelectorAll('input[name^="permissions"][name$="[edit]"]');
+
+            viewCheckboxes.forEach(viewCheckbox => {
+                viewCheckbox.addEventListener('change', function() {
+                    console.log('View checkbox changed:', this.name, 'Checked:', this.checked); // Debugging line
+                    const parts = this.name.match(/permissions\[(\d+)\]\[(.+)\]\[view\]/);
+                    if (parts && parts[1] && parts[2]) {
+                        const profId = parts[1];
+                        const noteType = parts[2];
+                        const editCheckbox = document.getElementById(`edit-${profId}-${noteType}`);
+                        if (editCheckbox) {
+                            if (this.checked) {
+                                editCheckbox.disabled = false;
+                            } else {
+                                editCheckbox.checked = false;
+                                editCheckbox.disabled = true;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Initial state check on page load
+            viewCheckboxes.forEach(viewCheckbox => {
+                 const parts = viewCheckbox.name.match(/permissions\[(\d+)\]\[(.+)\]\[view\]/);
+                 if (parts && parts[1] && parts[2]) {
+                     const profId = parts[1];
+                     const noteType = parts[2];
+                     const editCheckbox = document.getElementById(`edit-${profId}-${noteType}`);
+                     if (editCheckbox) {
+                         if (!viewCheckbox.checked) {
+                             editCheckbox.checked = false;
+                             editCheckbox.disabled = true;
+                         }
+                     }
+                 }
+            });
+
+            // Add logic for "Tout Voir" and "Tout Modifier" buttons
+            const toggleAllViewButton = document.getElementById('toggle-all-view');
+            const toggleAllEditButton = document.getElementById('toggle-all-edit');
+
+            toggleAllViewButton.addEventListener('click', function() {
+                const allChecked = Array.from(viewCheckboxes).every(cb => cb.checked);
+                viewCheckboxes.forEach(cb => {
+                    cb.checked = !allChecked;
+                    // Trigger change event to update corresponding edit checkbox state
+                    cb.dispatchEvent(new Event('change'));
+                });
+            });
+
+            toggleAllEditButton.addEventListener('click', function() {
+                // Only toggle edit if the corresponding view is checked
+                const allChecked = Array.from(editCheckboxes).every(cb => cb.checked || cb.disabled);
+                editCheckboxes.forEach(editCheckbox => {
+                    const parts = editCheckbox.name.match(/permissions\[(\d+)\]\[(.+)\]\[edit\]/);
+                    if (parts && parts[1] && parts[2]) {
+                        const profId = parts[1];
+                        const noteType = parts[2];
+                        const viewCheckbox = document.getElementById(`view-${profId}-${noteType}`);
+                        if (viewCheckbox && viewCheckbox.checked) {
+                             editCheckbox.checked = !allChecked;
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
