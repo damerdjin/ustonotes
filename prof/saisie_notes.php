@@ -29,7 +29,8 @@ $groupes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 // Si un groupe est sélectionné, récupérer les étudiants
 $etudiants = [];
 if ($groupe) {
-    $etudiants = getEtudiantsByGroupeAndProf($db, $groupe, $_SESSION['user']['id']);
+    $decoded_groupe = urldecode($groupe);
+    $etudiants = getEtudiantsByGroupeAndProf($db, $decoded_groupe, $_SESSION['user']['id']);
 }
 
 // Traitement du formulaire de saisie des notes
@@ -153,7 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_notes'])) {
                                 <table class="table table-striped table-notes">
                                     <thead>
                                         <tr>
-                                            <th>Matricule</th>
                                             <th>Nom</th>
                                             <th>Prénom</th>
                                             <?php
@@ -184,7 +184,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_notes'])) {
                                     <tbody>
                                         <?php foreach ($etudiants as $index => $etudiant): ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($etudiant['matricule']) ?></td>
                                             <td><?= htmlspecialchars($etudiant['nom']) ?></td>
                                             <td><?= htmlspecialchars($etudiant['prenom']) ?></td>
                                             <?php foreach ($note_types as $key => $note_info): ?>
