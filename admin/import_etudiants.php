@@ -23,106 +23,107 @@ $professeurs = $stmt->fetchAll();
 // Traitement du formulaire d'importation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_import'])) {
     $note_type = $_POST['note_type'] ?? '';
-    
+
     if (!empty($_FILES['csv_file']['tmp_name'])) {
         try {
             // Ouvrir le fichier en mode UTF-8
             setlocale(LC_ALL, 'fr_FR.UTF-8');
             $content = file_get_contents($_FILES['csv_file']['tmp_name']);
-            
+
             // Détecter et convertir l'encodage si nécessaire
             $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-1252', 'ISO-8859-1'], true);
             if ($encoding !== 'UTF-8') {
                 $content = mb_convert_encoding($content, 'UTF-8', $encoding);
             }
-            
+
             // Créer un flux temporaire avec le contenu converti
             $handle = fopen('php://memory', 'r+');
             fwrite($handle, $content);
             rewind($handle);
-            
+
             if ($handle === false) {
                 throw new Exception('Impossible de traiter le fichier CSV');
             }
-            
+
             // Ignorer les deux premières lignes (titre et en-têtes)
             for ($i = 0; $i < 2; $i++) {
                 fgetcsv($handle, 0, ";");
             }
-            
+
             $importes = 0;
             $erreurs = 0;
-            
+
             while (($row = fgetcsv($handle, 0, ";")) !== false) {
                 if (empty($row[0])) continue;
-                
+
                 $matricule = substr(trim($row[0]), 0, 20); // Limiter la longueur du matricule
                 $nom = substr(trim($row[1]), 0, 50); // Limiter la longueur du nom
                 $prenom = substr(trim($row[2]), 0, 50); // Limiter la longueur du prénom
                 $note = !empty($row[3]) ? number_format((float)$row[3], 2, '.', '') : null;
-                
+
                 // Récupérer la valeur complète de la dernière colonne (format: section1/groupe 1)
                 $groupe = trim(end($row));
-                
-                    // Vérifier si le prénom contient des caractères invalides
-    if (!mb_check_encoding($prenom, 'UTF-8')) {
-        throw new Exception("$prenom");
-    }
 
-    // Vérifier si le nom contient des caractères invalides
-    if (!mb_check_encoding($nom, 'UTF-8')) {
-        throw new Exception("Caractère invalide dans le nom à la ligne $line_number: $nom");
-    }
+                // Vérifier si le prénom contient des caractères invalides
+                // Vérifier et nettoyer les caractères invalides
+                if (!mb_check_encoding($prenom, 'UTF-8')) {
+                    $prenom = '';
+                    $erreurs++;
+                }
+
+                if (!mb_check_encoding($nom, 'UTF-8')) {
+                    $nom = '';
+                    $erreurs++;
+                }
 
                 // Vérifier si l'étudiant existe
                 $check = $db->prepare("SELECT id FROM usto_students WHERE matricule = ?");
                 $check->execute([$matricule]);
                 $etudiant_id = $check->fetchColumn();
-                
+
                 if ($etudiant_id) {
                     // Mise à jour de l'étudiant existant
                     $sql = "UPDATE usto_students SET nom = ?, prenom = ?, groupe = ?"
-                         . ($note_type && $note !== null ? ", $note_type = ?" : "")
-                         . " WHERE matricule = ?";
-                    
+                        . ($note_type && $note !== null ? ", $note_type = ?" : "")
+                        . " WHERE matricule = ?";
+
                     $params = [$nom, $prenom, $groupe];
                     if ($note_type && $note !== null) {
                         $params[] = $note;
                     }
                     $params[] = $matricule;
-                    
+
                     $stmt = $db->prepare($sql);
                     $result = $stmt->execute($params);
                 } else {
                     // Insertion d'un nouvel étudiant
-                    $sql = "INSERT INTO usto_students (matricule, nom, prenom, groupe" 
-                         . ($note_type && $note !== null ? ", $note_type" : "") 
-                         . ") VALUES (?, ?, ?, ?" 
-                         . ($note_type && $note !== null ? ", ?" : "") 
-                         . ")";
-                    
+                    $sql = "INSERT INTO usto_students (matricule, nom, prenom, groupe"
+                        . ($note_type && $note !== null ? ", $note_type" : "")
+                        . ") VALUES (?, ?, ?, ?"
+                        . ($note_type && $note !== null ? ", ?" : "")
+                        . ")";
+
                     $params = [$matricule, $nom, $prenom, $groupe];
                     if ($note_type && $note !== null) {
                         $params[] = $note;
                     }
-                    
+
                     $stmt = $db->prepare($sql);
                     $result = $stmt->execute($params);
                 }
-                
+
                 if ($result) {
                     $importes++;
                 } else {
                     $erreurs++;
                 }
             }
-            
+
             if ($importes > 0) {
                 $success = "$importes étudiant(s) importé(s) avec succès. $erreurs erreur(s) rencontrée(s).";
             } else {
                 $error = "Aucun étudiant n'a été importé. Vérifiez le format des données.";
             }
-            
         } catch (Exception $e) {
             $error = "Erreur lors de l'importation du fichier: " . $e->getMessage();
         }
@@ -167,12 +168,14 @@ $etudiants = $stmt->fetchAll();
 
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Importation des Étudiants</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body>
     <div class="container mt-4">
         <div class="row mb-4">
@@ -187,15 +190,15 @@ $etudiants = $stmt->fetchAll();
                 </nav>
             </div>
         </div>
-        
+
         <?php if ($success): ?>
             <div class="alert alert-success"><?= $success ?></div>
         <?php endif; ?>
-        
+
         <?php if ($error): ?>
             <div class="alert alert-danger"><?= $error ?></div>
         <?php endif; ?>
-        
+
         <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card">
@@ -225,7 +228,7 @@ $etudiants = $stmt->fetchAll();
                 </div>
             </div>
         </div>
-        
+
         <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card">
@@ -260,7 +263,7 @@ $etudiants = $stmt->fetchAll();
                 </div>
             </div>
         </div>
-        
+
         <div class="row">
             <div class="col-md-12">
                 <div class="card">
@@ -277,16 +280,29 @@ $etudiants = $stmt->fetchAll();
                                             <th>Groupe</th>
                                             <th>Professeur</th>
                                             <th><?php
-                                                switch($note_type) {
-                                                    case 'note_cc': echo 'CC'; break;
-                                                    case 'exam': echo 'Examen'; break;
-                                                    case 'ratt': echo 'Rattrapage'; break;
-                                                    case 't01': echo 'Test 1'; break;
-                                                    case 't02': echo 'Test 2'; break;
-                                                    case 'participation': echo 'Participation'; break;
-                                                    default: echo 'Note';
+                                                switch ($note_type) {
+                                                    case 'note_cc':
+                                                        echo 'CC';
+                                                        break;
+                                                    case 'exam':
+                                                        echo 'Examen';
+                                                        break;
+                                                    case 'ratt':
+                                                        echo 'Rattrapage';
+                                                        break;
+                                                    case 't01':
+                                                        echo 'Test 1';
+                                                        break;
+                                                    case 't02':
+                                                        echo 'Test 2';
+                                                        break;
+                                                    case 'participation':
+                                                        echo 'Participation';
+                                                        break;
+                                                    default:
+                                                        echo 'Note';
                                                 }
-                                            ?></th>
+                                                ?></th>
                                             <th>Moyenne</th>
                                             <th>Actions</th>
                                         </tr>
@@ -298,7 +314,7 @@ $etudiants = $stmt->fetchAll();
                                                 <td><?= htmlspecialchars($e['nom']) ?></td>
                                                 <td><?= htmlspecialchars($e['prenom']) ?></td>
                                                 <td>
-                                                    <?php 
+                                                    <?php
                                                     echo htmlspecialchars($e['groupe']);
                                                     ?>
                                                 </td>
@@ -334,7 +350,8 @@ $etudiants = $stmt->fetchAll();
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
