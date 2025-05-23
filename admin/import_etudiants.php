@@ -271,7 +271,7 @@ $etudiants = $stmt->fetchAll();
                                         'moy2' => 'Moyenne 2',
                                         'moygen' => 'Moyenne Finale'
                                     ];
-                                    $selected_columns = isset($_GET['columns']) ? $_GET['columns'] : array_keys($note_columns);
+                                    $selected_columns = isset($_GET['columns']) ? $_GET['columns'] : ['note_cc', 'exam'];
                                     foreach ($note_columns as $col => $label): ?>
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" name="columns[]" 
@@ -346,6 +346,26 @@ $etudiants = $stmt->fetchAll();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap5.min.css">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.table').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+                },
+                pageLength: 25,
+                order: [[1, 'asc']],
+                dom: '<"d-flex justify-content-between align-items-center mb-3"<"d-flex align-items-center"l><"d-flex"f>>rtip'
+            });
+        });
+    </script>
 </body>
 
 </html>
