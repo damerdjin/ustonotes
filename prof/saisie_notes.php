@@ -87,12 +87,23 @@ if ($groupe) {
     <style>
         .table-notes input {
             width: 80px;
-            /* Increased width */
             text-align: center;
         }
 
         .table-responsive {
             overflow-x: auto;
+        }
+
+        .table-notes {
+            position: relative;
+        }
+
+        .table-notes th:first-child,
+        .table-notes td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 1;
         }
     </style>
 </head>
