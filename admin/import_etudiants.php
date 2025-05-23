@@ -144,7 +144,9 @@ $sql = "SELECT s.*, u.nom as prof_nom, u.prenom as prof_prenom,
         CAST(s.t01 AS DECIMAL(4,2)) as t01,
         CAST(s.t02 AS DECIMAL(4,2)) as t02,
         CAST(s.participation AS DECIMAL(4,2)) as participation,
-        CAST(s.moygen AS DECIMAL(4,2)) as moygen
+        CAST(s.moygen AS DECIMAL(4,2)) as moygen,
+        CAST(s.moy1 AS DECIMAL(4,2)) as moy1,
+        CAST(s.moy2 AS DECIMAL(4,2)) as moy2
         FROM usto_students s 
         LEFT JOIN usto_users u ON s.id_prof = u.id 
         WHERE 1=1";
@@ -234,9 +236,9 @@ $etudiants = $stmt->fetchAll();
                 <div class="card">
                     <div class="card-header">Filtrer les étudiants</div>
                     <div class="card-body">
-                        <form method="GET" class="row g-3">
-                            <div class="col-md-5">
-                                <select name="filter_groupe" class="form-select">
+                        <form method="GET" class="row g-3" id="filterForm">
+                            <div class="col-md-4">
+                                <select name="filter_groupe" class="form-select" onchange="this.form.submit()">
                                     <option value="">Tous les groupes</option>
                                     <?php foreach ($groupes as $g): ?>
                                         <option value="<?= htmlspecialchars($g['groupe']) ?>" <?= $filter_groupe == $g['groupe'] ? 'selected' : '' ?>>
@@ -245,8 +247,8 @@ $etudiants = $stmt->fetchAll();
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-5">
-                                <select name="filter_prof" class="form-select">
+                            <div class="col-md-4">
+                                <select name="filter_prof" class="form-select" onchange="this.form.submit()">
                                     <option value="">Tous les professeurs</option>
                                     <?php foreach ($professeurs as $p): ?>
                                         <option value="<?= $p['id'] ?>" <?= $filter_prof == $p['id'] ? 'selected' : '' ?>>
@@ -255,8 +257,33 @@ $etudiants = $stmt->fetchAll();
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary w-100">Filtrer</button>
+                            <div class="col-md-4">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <?php
+                                    $note_columns = [
+                                        't01' => 'Test 1',
+                                        't02' => 'Test 2',
+                                        'participation' => 'Participation',
+                                        'note_cc' => 'CC',
+                                        'exam' => 'Examen',
+                                        'moy1' => 'Moyenne 1',
+                                        'ratt' => 'Rattrapage',
+                                        'moy2' => 'Moyenne 2',
+                                        'moygen' => 'Moyenne Finale'
+                                    ];
+                                    $selected_columns = isset($_GET['columns']) ? $_GET['columns'] : array_keys($note_columns);
+                                    foreach ($note_columns as $col => $label): ?>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="columns[]" 
+                                                value="<?= $col ?>" id="col_<?= $col ?>" 
+                                                <?= in_array($col, $selected_columns) ? 'checked' : '' ?>
+                                                onchange="this.form.submit()">
+                                            <label class="form-check-label" for="col_<?= $col ?>">
+                                                <?= $label ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -279,31 +306,9 @@ $etudiants = $stmt->fetchAll();
                                             <th>Prénom</th>
                                             <th>Groupe</th>
                                             <th>Professeur</th>
-                                            <th><?php
-                                                switch ($note_type) {
-                                                    case 'note_cc':
-                                                        echo 'CC';
-                                                        break;
-                                                    case 'exam':
-                                                        echo 'Examen';
-                                                        break;
-                                                    case 'ratt':
-                                                        echo 'Rattrapage';
-                                                        break;
-                                                    case 't01':
-                                                        echo 'Test 1';
-                                                        break;
-                                                    case 't02':
-                                                        echo 'Test 2';
-                                                        break;
-                                                    case 'participation':
-                                                        echo 'Participation';
-                                                        break;
-                                                    default:
-                                                        echo 'Note';
-                                                }
-                                                ?></th>
-                                            <th>Moyenne</th>
+                                            <?php foreach ($selected_columns as $col): ?>
+                                                <th><?= $note_columns[$col] ?></th>
+                                            <?php endforeach; ?>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -313,30 +318,19 @@ $etudiants = $stmt->fetchAll();
                                                 <td><?= htmlspecialchars($e['matricule']) ?></td>
                                                 <td><?= htmlspecialchars($e['nom']) ?></td>
                                                 <td><?= htmlspecialchars($e['prenom']) ?></td>
-                                                <td>
-                                                    <?php
-                                                    echo htmlspecialchars($e['groupe']);
-                                                    ?>
-                                                </td>
+                                                <td><?= htmlspecialchars($e['groupe']) ?></td>
                                                 <td><?= htmlspecialchars($e['prof_nom']) ?></td>
-                                                <td>
-                                                    <?php if (isset($e[$note_type])): ?>
-                                                        <span class="badge bg-<?= $e[$note_type] >= 10 ? 'success' : 'danger' ?>">
-                                                            <?= number_format($e[$note_type], 2, '.', '') ?>/20
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="badge bg-secondary">Non évalué</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <?php if ($e['moygen']): ?>
-                                                        <span class="badge bg-<?= $e['moygen'] >= 10 ? 'success' : 'danger' ?>">
-                                                            <?= $e['moygen'] ?>/20
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="badge bg-secondary">Non évalué</span>
-                                                    <?php endif; ?>
-                                                </td>
+                                                <?php foreach ($selected_columns as $col): ?>
+                                                    <td>
+                                                        <?php if (isset($e[$col]) && $e[$col] !== null): ?>
+                                                            <span class="badge bg-<?= $e[$col] >= 10 ? 'success' : 'danger' ?>">
+                                                                <?= number_format($e[$col], 2, '.', '') ?>/20
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-secondary">Non évalué</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                <?php endforeach; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
