@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_notes'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .table-notes input {
-            width: 60px;
+            width: 80px; /* Increased width */
             text-align: center;
         }
         .table-responsive {
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_notes'])) {
                                                              <span class="badge bg-<?= ($key === 'moy1') ? 'info' : 'success' ?>"><?= $etudiant[$note_info['field']] ?? '-' ?></span>
                                                          <?php elseif ($can_edit): // Editable fields ?>
                                                              <input type="hidden" name="student_id[<?= $index ?>]" value="<?= $etudiant['id'] ?>">
-                                                             <input type="number" name="<?= $note_info['field'] ?>[<?= $index ?>]" value="<?= $etudiant[$note_info['field']] ?>" min="0" max="20" class="form-control">
+                                                             <input type="number" name="<?= $note_info['field'] ?>[<?= $index ?>]" value="<?= $etudiant[$note_info['field']] ?>" min="0" max="<?= ($key === 't01' || $key === 't02') ? 9 : (($key === 'participation') ? 2 : 20) ?>" step="0.25" class="form-control">
                                                          <?php else: // View-only fields ?>
                                                              <?= htmlspecialchars($etudiant[$note_info['field']] ?? '-') ?>
                                                          <?php endif; ?>
