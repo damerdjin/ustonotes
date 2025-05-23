@@ -325,6 +325,90 @@ $profs = $profs_raw; // Garder $profs pour la liste déroulante
                     </div>
                 </div>
             </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingProfesseurs">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProfesseurs" aria-expanded="false" aria-controls="collapseProfesseurs">
+                        Gestion des professeurs
+                    </button>
+                </h2>
+                <div id="collapseProfesseurs" class="accordion-collapse collapse" aria-labelledby="headingProfesseurs" data-bs-parent="#gestionAccordion">
+                    <div class="accordion-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">Ajouter un professeur</div>
+                                    <div class="card-body">
+                                        <form method="POST">
+                                            <div class="mb-3">
+                                                <label for="nom" class="form-label">Nom</label>
+                                                <input type="text" class="form-control" id="nom" name="nom" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="prenom" class="form-label">Prénom</label>
+                                                <input type="text" class="form-control" id="prenom" name="prenom" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="email" class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="email" name="email" required>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">Créer le professeur</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">Liste des professeurs</div>
+                                    <div class="card-body">
+                                        <?php
+                                        $profs = $db->query("SELECT * FROM usto_users WHERE admin = 0 ORDER BY nom, prenom")->fetchAll();
+                                        if (count($profs) > 0):
+                                        ?>
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Nom</th>
+                                                    <th>Prénom</th>
+                                                    <th>Email</th>
+                                                    <th>Statut</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($profs as $prof): ?>
+                                                <tr>
+                                                    <td><?= $prof['id'] ?></td>
+                                                    <td><?= htmlspecialchars($prof['nom']) ?></td>
+                                                    <td><?= htmlspecialchars($prof['prenom']) ?></td>
+                                                    <td><?= htmlspecialchars($prof['email']) ?></td>
+                                                    <td>
+                                                        <?php if ($prof['activated'] == 1): ?>
+                                                            <span class="badge bg-success">Actif</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-danger">Inactif</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <a href="?toggle=<?= $prof['id'] ?>" class="btn btn-sm btn-warning">
+                                                            <?= $prof['activated'] == 1 ? 'Désactiver' : 'Activer' ?>
+                                                        </a>
+                                                        <a href="?reset=<?= $prof['id'] ?>" class="btn btn-sm btn-info">Réinitialiser MDP</a>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                        <?php else: ?>
+                                            <div class="alert alert-info">Aucun professeur trouvé</div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
