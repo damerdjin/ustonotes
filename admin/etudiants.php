@@ -310,11 +310,7 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
         function exportToPdf() {
             const selectedColumns = Array.from(document.querySelectorAll('input[name="columns[]"]:checked')).map(c => c.value);
             if (selectedColumns.length === 0) {
-                alert('Veuillez sélectionner une colonne de notes pour l\'export PDF.');
-                return;
-            }
-            if (selectedColumns.length > 1) {
-                alert('Veuillez sélectionner une seule colonne de notes pour l\'export PDF.');
+                alert('Veuillez sélectionner au moins une colonne de notes pour l\'export PDF.');
                 return;
             }
 
@@ -322,8 +318,8 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
             const groupeValue = filterGroupeSelect.value;
             const groupeText = (groupeValue === '' || groupeValue === 'tous') ? 'Tous' : filterGroupeSelect.options[filterGroupeSelect.selectedIndex].text.trim(); 
 
-            const noteKey = selectedColumns[0];
-            const noteLabel = noteColumnsMapping[noteKey] || 'Note';
+            // Utiliser "Notes" comme label générique si plusieurs colonnes sont sélectionnées, sinon le label de la note unique.
+            const noteLabel = selectedColumns.length > 1 ? 'Notes' : (noteColumnsMapping[selectedColumns[0]] || 'Note');
             
             const filterProfSelect = document.querySelector('select[name="filter_prof"]');
             const selectedProfId = filterProfSelect.value;
@@ -344,21 +340,26 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
                 profText = profFullName.split(' ')[0]; // Assumes Nom Prénom format
             }
 
-            // Permission check using global editPermissions
+            // Permission check using global editPermissions for all selected note types
             let canExport = true;
-            if (selectedProfId && selectedProfId !== 'tous') { 
-                if (editPermissions[noteKey] && editPermissions[noteKey].includes(selectedProfId)) {
-                    canExport = false;
-                    alert(`Exportation PDF impossible: Le professeur sélectionné a les droits d'édition pour ${noteLabel}.`);
+            let problematicNoteLabels = [];
+            selectedColumns.forEach(noteKeyToCheck => {
+                const currentNoteLabel = noteColumnsMapping[noteKeyToCheck] || 'Note';
+                if (selectedProfId && selectedProfId !== 'tous') { 
+                    if (editPermissions[noteKeyToCheck] && editPermissions[noteKeyToCheck].includes(selectedProfId)) {
+                        canExport = false;
+                        if (!problematicNoteLabels.includes(currentNoteLabel)) problematicNoteLabels.push(currentNoteLabel);
+                    }
+                } else { 
+                    if (editPermissions[noteKeyToCheck] && editPermissions[noteKeyToCheck].length > 0) {
+                        canExport = false;
+                        if (!problematicNoteLabels.includes(currentNoteLabel)) problematicNoteLabels.push(currentNoteLabel);
+                    }
                 }
-            } else { 
-                if (editPermissions[noteKey] && editPermissions[noteKey].length > 0) {
-                    canExport = false;
-                    alert(`Exportation PDF impossible: Au moins un professeur a les droits d'édition pour ${noteLabel}.`);
-                }
-            }
+            });
 
             if (!canExport) {
+                alert(`Exportation PDF impossible: Droits d'édition présents pour le(s) type(s) de note(s) suivant(s): ${problematicNoteLabels.join(', ')}.`);
                 return;
             }
 
@@ -374,14 +375,14 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
             });
 
             const dataForPdf = [];
-            const headers = ['Groupe', 'Nom', 'Prénom', noteLabel]; // Changed 'N° Inscription' to 'Groupe'
+            const headers = ['Groupe', 'Nom', 'Prénom', ...selectedColumns.map(col => noteColumnsMapping[col] || 'Note')];
 
             sortedStudentData.forEach(student => {
-                const studentGroupe = student.groupe; // Get student's group
+                const studentGroupe = student.groupe;
                 const nom = student.nom;
                 const prenom = student.prenom;
-                const noteValue = (student[noteKey] !== undefined && student[noteKey] !== null) ? String(student[noteKey]) : 'N/A';
-                dataForPdf.push([studentGroupe, nom, prenom, noteValue]);
+                const notesValues = selectedColumns.map(col => (student[col] !== undefined && student[col] !== null) ? String(student[col]) : 'N/A');
+                dataForPdf.push([studentGroupe, nom, prenom, ...notesValues]);
             });
 
             if (dataForPdf.length === 0) {
