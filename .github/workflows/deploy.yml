@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Déployer via FTP
-        uses: samkirsch/ftp-deploy@v2.4.0  # Version mise à jour
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.0  # ✅ Action officielle et maintenue
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
