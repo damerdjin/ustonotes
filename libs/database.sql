@@ -27,6 +27,7 @@ CREATE TABLE usto_users (
     passwd VARCHAR(15) NOT NULL,
     admin INT(11) NOT NULL,
     activated TINYINT(1) NOT NULL DEFAULT 1,
+    first_login TINYINT(1) NOT NULL DEFAULT 1,
     PRIMARY KEY (id)
 );
 
