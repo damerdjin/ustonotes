@@ -202,6 +202,7 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
                         <?php endif; ?>
                         <div class="mt-3">
                             <button class="btn btn-success" onclick="exportToExcel()">Exporter en Excel</button>
+                            <button class="btn btn-danger ms-2" onclick="exportToPdf()">Exporter en PDF</button>
                         </div>
                     </div>
                 </div>
@@ -271,7 +272,82 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
              XLSX.writeFile(wb, `${groupe}_${noteKey}.xlsx`);
          }
     </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        function exportToPdf() {
+            const selectedColumns = Array.from(document.querySelectorAll('input[name="columns[]"]:checked')).map(c => c.value);
+            if (selectedColumns.length === 0) {
+                alert('Veuillez sélectionner une colonne de notes pour l\'export PDF.');
+                return;
+            }
+            if (selectedColumns.length > 1) {
+                alert('Veuillez sélectionner une seule colonne de notes pour l\'export PDF.');
+                return;
+            }
+
+            const filterGroupeSelect = document.querySelector('select[name="filter_groupe"]');
+            const groupe = filterGroupeSelect.options[filterGroupeSelect.selectedIndex].text.trim() || 'tous'; // .text for display name, .trim() to remove extra spaces
+            const noteKey = selectedColumns[0];
+            const noteLabel = noteColumnsMapping[noteKey] || 'Note'; // Uses global noteColumnsMapping from exportToExcel script block
+            const selectedProfId = document.querySelector('select[name="filter_prof"]').value; // Value of selected professor
+
+            // Permission check using global editPermissions
+            let canExport = true;
+            if (selectedProfId && selectedProfId !== 'tous') { // A specific professor is selected (value is not empty and not 'tous')
+                if (editPermissions[noteKey] && editPermissions[noteKey].includes(selectedProfId)) {
+                    canExport = false;
+                    alert(`Exportation PDF impossible: Le professeur sélectionné a les droits d'édition pour ${noteLabel}.`);
+                }
+            } else { // "Tous les professeurs" is selected (selectedProfId is empty or 'tous')
+                if (editPermissions[noteKey] && editPermissions[noteKey].length > 0) {
+                    canExport = false;
+                    alert(`Exportation PDF impossible: Au moins un professeur a les droits d'édition pour ${noteLabel}.`);
+                }
+            }
+
+            if (!canExport) {
+                return;
+            }
+
+            const dataForPdf = [];
+            const headers = ['N° Inscription', 'Nom', 'Prénom', noteLabel];
+
+            // Use global studentData, already filtered by PHP if filters are applied, or all students if no filters
+            studentData.forEach(student => {
+                const matricule = student.matricule;
+                const nom = student.nom;
+                const prenom = student.prenom;
+                const noteValue = (student[noteKey] !== undefined && student[noteKey] !== null) ? String(student[noteKey]) : 'N/A';
+                dataForPdf.push([matricule, nom, prenom, noteValue]);
+            });
+
+            if (dataForPdf.length === 0) {
+                alert("Aucune donnée à exporter en PDF.");
+                return;
+            }
+
+            const doc = new window.jspdf.jsPDF(); // Use window.jspdf.jsPDF to ensure it's accessed correctly
+            doc.autoTable({
+                head: [headers],
+                body: dataForPdf,
+                startY: 25, // Start table after title
+                headStyles: { fillColor: [41, 128, 185] }, // A nice blue for header
+                didDrawPage: function (data) {
+                    // Page Title
+                    doc.setFontSize(18);
+                    doc.setTextColor(40);
+                    doc.text(`Notes - ${noteLabel} (Groupe: ${groupe})`, data.settings.margin.left, 15);
+                }
+            });
+
+            const filename = `${groupe}_${noteKey}.pdf`;
+            doc.save(filename);
+        }
+    </script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap5.min.css">
+
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
