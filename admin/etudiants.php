@@ -404,19 +404,16 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
                 }
             });
 
-            // Footer - Page numbering after all pages are drawn
-            const pageCount = doc.internal.getNumberOfPages();
-            doc.setFontSize(10);
-            doc.setTextColor(150);
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.text(
-                    `Page ${i} / ${pageCount}`,
-                    doc.internal.pageSize.width / 2, // Center the page number
-                    doc.internal.pageSize.height - 10,
-                    { align: 'center' }
-                );
-            }
+                    // Footer
+                    const pageCount = doc.internal.getNumberOfPages();
+                    const now = new Date();
+                    const dateTimeString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                    doc.setFontSize(10);
+                    for (let i = 1; i <= pageCount; i++) {
+                        doc.setPage(i);
+                        const text = `Page ${i} sur ${pageCount} - ${dateTimeString}`;
+                        doc.text(text, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+                    }
 
             // Filename format remains: typeNote_Groupe_NomProf.pdf
             doc.save(`${noteLabel}_${groupeText}_${profText}.pdf`);
