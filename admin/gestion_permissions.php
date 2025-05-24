@@ -151,7 +151,6 @@ error_log("Permissions Data Structure: " . print_r($permissionsData, true));
                 <h1>Administration - Gestion des Permissions</h1>
                 <nav class="nav nav-pills">
                     <a class="nav-link" href="gestion.php">Gestion</a>
-                    <a class="nav-link" href="creer_prof.php">Professeurs</a>
                     <a class="nav-link" href="etudiants.php">Étudiants</a>
                     <a class="nav-link" href="gestion_notes.php">Notes</a>
                     <a class="nav-link active" href="gestion_permissions.php">Permissions</a>

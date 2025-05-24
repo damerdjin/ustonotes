@@ -87,8 +87,7 @@ $taux_reussite = ($total_etudiants - $non_evalues) > 0 ? round(($admis / ($total
             <div class="col-md-12">
                 <h1>Administration - Gestion des Notes</h1>
                 <nav class="nav nav-pills">
-                    <a class="nav-link" href="gerer_groupes.php">Groupes</a>
-                    <a class="nav-link" href="creer_prof.php">Professeurs</a>
+                    <a class="nav-link" href="gestion.php">Gestion</a>
                     <a class="nav-link" href="etudiants.php">Étudiants</a>
                     <a class="nav-link active" href="gestion_notes.php">Notes</a>
                     <a class="nav-link" href="gestion_permissions.php">Permissions</a>

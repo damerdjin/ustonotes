@@ -17,7 +17,7 @@ $stmt = $db->query("SELECT DISTINCT groupe FROM usto_students ORDER BY groupe");
 $groupes = $stmt->fetchAll();
 
 // Récupération des professeurs
-$stmt = $db->query("SELECT * FROM usto_users WHERE admin = 0 AND activated = 1 ORDER BY nom, prenom");
+$stmt = $db->query("SELECT * FROM usto_users WHERE admin = 0 ORDER BY nom, prenom");
 $professeurs = $stmt->fetchAll();
 
 
@@ -74,8 +74,7 @@ $etudiants = $stmt->fetchAll();
                 <h1>Administration - Importation des Étudiants</h1>
                 <nav class="nav nav-pills">
                     <a class="nav-link" href="gestion.php">Gestion</a>
-                    <a class="nav-link" href="creer_prof.php">Professeurs</a>
-                    <a class="nav-link active" href="import_etudiants.php">Étudiants</a>
+                    <a class="nav-link active" href="etudiants.php">Étudiants</a>
                     <a class="nav-link" href="gestion_notes.php">Notes</a>
                     <a class="nav-link" href="gestion_permissions.php">Permissions</a>
                     <a class="nav-link text-danger" href="../logout.php">Déconnexion</a>
