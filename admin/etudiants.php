@@ -228,14 +228,27 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
              const groupe = filterGroupeSelect.options[filterGroupeSelect.selectedIndex].text || 'tous';
              const noteKey = selectedColumns[0] || 'note';
              const noteLabel = noteColumnsMapping[noteKey] || 'Note';
+             const selectedProfId = document.querySelector('select[name="filter_prof"]').value;
 
              // Vérifier les permissions d'édition
-             if (editPermissions[noteKey] && editPermissions[noteKey].length > 0) {
-                 alert('Exportation impossible: Un ou plusieurs professeurs ont les droits d\'édition pour le type de note sélectionné (' + noteLabel + ').');
-                 return;
+             let canExport = true;
+             if (selectedProfId) { // Un professeur spécifique est sélectionné
+                 if (editPermissions[noteKey] && editPermissions[noteKey].includes(selectedProfId)) {
+                     canExport = false;
+                     alert('Exportation impossible: Le professeur sélectionné a les droits d\'édition pour le type de note sélectionné (' + noteLabel + ').');
+                 }
+             } else { // "Tous les professeurs" est sélectionné
+                 if (editPermissions[noteKey] && editPermissions[noteKey].length > 0) {
+                     canExport = false;
+                     alert('Exportation impossible: Un ou plusieurs professeurs ont les droits d\'édition pour le type de note sélectionné (' + noteLabel + ').');
+                 }
              }
 
-             const data = [['Matricule', 'Nom', 'Prénom', noteLabel, 'Groupe']];
+             if (!canExport) {
+                 return;
+             }
+             //ne change pas 
+             const data = [['Matricule', 'Nom', 'Prénom', noteLabel,'Absent','Absence Justifiée','Observation','Section', 'Groupe']];
              data.unshift([]); // Add an empty array at the beginning
 
              studentData.forEach(student => {
