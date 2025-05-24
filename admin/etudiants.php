@@ -217,16 +217,21 @@ $etudiants = $stmt->fetchAll();
              const noteKey = selectedColumns[0] || 'note';
              const noteLabel = noteColumnsMapping[noteKey] || 'Note';
 
-             const data = [['Matricule', 'Nom', 'Prénom', 'Note', 'Groupe']];
+             const data = [['Matricule', 'Nom', 'Prénom', 'Note','Absent','Absence Justifiée','Observation','Section', 'Groupe']];
              data.unshift([]); // Add an empty array at the beginning
 
              studentData.forEach(student => {
                  const matricule = student.matricule;
                  const nom = student.nom;
                  const prenom = student.prenom;
+                 const absence = '';
+                 const absenceJustifiee = '';
+                 const observation = '';
+                 const section = '';
                  const studentGroupe = student.groupe;
-                 const noteValue = student[noteKey] !== null ? `${parseFloat(student[noteKey]).toFixed(2)}` : 'Non évalué';
-                 data.push([matricule, nom, prenom, noteValue, studentGroupe]);
+                 const noteValue = student[noteKey];
+                 //const noteValue = student[noteKey] !== null ? `${parseFloat(student[noteKey]).toFixed(2)}` : 'Non évalué';
+                 data.push([matricule, nom, prenom, noteValue,absence,absenceJustifiee, observation, section, studentGroupe]);
              });
 
              const ws = XLSX.utils.aoa_to_sheet(data);
