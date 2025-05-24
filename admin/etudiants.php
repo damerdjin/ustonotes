@@ -55,6 +55,17 @@ $sql .= " ORDER BY s.nom, s.prenom";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $etudiants = $stmt->fetchAll();
+
+// Récupération des permissions d'édition des notes
+$permissions_stmt = $db->query("SELECT prof_id, note_type, can_edit FROM usto_prof_permissions WHERE can_edit = 1");
+$edit_permissions = [];
+foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
+    if (!isset($edit_permissions[$perm['note_type']])) {
+        $edit_permissions[$perm['note_type']] = [];
+    }
+    $edit_permissions[$perm['note_type']][] = $perm['prof_id'];
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -204,6 +215,7 @@ $etudiants = $stmt->fetchAll();
     <script>
         const studentData = <?php echo json_encode($etudiants); ?>;
         const noteColumnsMapping = <?php echo json_encode($note_columns); ?>;
+        const editPermissions = <?php echo json_encode($edit_permissions); ?>;
 
         function exportToExcel() {
              const selectedColumns = Array.from(document.querySelectorAll('input[name="columns[]"]:checked')).map(c => c.value);
@@ -217,7 +229,13 @@ $etudiants = $stmt->fetchAll();
              const noteKey = selectedColumns[0] || 'note';
              const noteLabel = noteColumnsMapping[noteKey] || 'Note';
 
-             const data = [['Matricule', 'Nom', 'Prénom', 'Note','Absent','Absence Justifiée','Observation','Section', 'Groupe']];
+             // Vérifier les permissions d'édition
+             if (editPermissions[noteKey] && editPermissions[noteKey].length > 0) {
+                 alert('Exportation impossible: Un ou plusieurs professeurs ont les droits d\'édition pour le type de note sélectionné (' + noteLabel + ').');
+                 return;
+             }
+
+             const data = [['Matricule', 'Nom', 'Prénom', noteLabel, 'Groupe']];
              data.unshift([]); // Add an empty array at the beginning
 
              studentData.forEach(student => {
