@@ -3,13 +3,21 @@ require_once '../includes/config.php';
 require_once '../includes/functions.php';
 require_prof();
 
+// Check if it's the first login
+if (isset($_SESSION['user']['first_login']) && $_SESSION['user']['first_login'] == 1) {
+    // Redirect to password change page
+    // You will need to create a password change page (e.g., change_password.php)
+    // and add logic to update the password and set first_login to 0 after successful change.
+    header('Location: change_password.php'); // Replace with the actual password change page path
+    exit();
+}
+
 // Récupération des groupes associés au professeur
-$stmt = $db->prepare("SELECT g.* FROM usto_groupes g 
-                     JOIN usto_prof_groupes pg ON g.id = pg.groupe_id 
-                     WHERE pg.prof_id = ? 
-                     ORDER BY g.nom_groupe");
+// Récupération des groupes associés au professeur depuis la table usto_students
+$stmt = $db->prepare("SELECT DISTINCT groupe FROM usto_students WHERE id_prof = ? ORDER BY groupe");
 $stmt->execute([$_SESSION['user']['id']]);
-$groupes = $stmt->fetchAll();
+$groupes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
 ?>
 
 <!DOCTYPE html>
@@ -47,8 +55,8 @@ $groupes = $stmt->fetchAll();
                                     <div class="col-md-4 mb-3">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h5 class="card-title"><?= htmlspecialchars($groupe['nom_groupe']) ?></h5>
-                                                <a href="saisie_notes.php?groupe=<?= $groupe['id'] ?>" class="btn btn-primary">Saisir les notes</a>
+                                                <h5 class="card-title"><?= htmlspecialchars($groupe) ?></h5>
+                                                <a href="saisie_notes.php?groupe=<?= urlencode($groupe) ?>" class="btn btn-primary">Saisir les notes</a>
                                             </div>
                                         </div>
                                     </div>

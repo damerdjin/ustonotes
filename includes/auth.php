@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         $_SESSION['user'] = $user;
         
         if ($user['admin'] == 1) {
-            header('Location: admin/gerer_groupes.php');
+            header('Location: admin/gestion.php');
         } else {
             header('Location: prof/dashboard.php');
         }
