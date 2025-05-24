@@ -56,6 +56,37 @@ $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $etudiants = $stmt->fetchAll();
 
+// Déterminer le nom du professeur si un groupe spécifique est sélectionné et "Tous les professeurs" est choisi
+if (!empty($filter_groupe) && empty($filter_prof) && count($etudiants) > 0) {
+    $first_prof_id = $etudiants[0]['id_prof'];
+    $same_prof_for_group = true;
+    $prof_name_for_group = $etudiants[0]['prof_nom'] . ' ' . $etudiants[0]['prof_prenom'];
+    foreach ($etudiants as $etudiant) {
+        if ($etudiant['id_prof'] !== $first_prof_id) {
+            $same_prof_for_group = false;
+            break;
+        }
+    }
+    if ($same_prof_for_group) {
+        $_SESSION['filter_prof_name'] = $prof_name_for_group;
+    } else {
+        // Si les professeurs sont différents pour le même groupe, on ne met rien ou on met "Tous"
+        unset($_SESSION['filter_prof_name']); // Ou $_SESSION['filter_prof_name'] = 'Tous'; selon le comportement souhaité
+    }
+} elseif (!empty($filter_prof)) {
+    // Si un professeur spécifique est sélectionné, on récupère son nom
+    $prof_stmt = $db->prepare("SELECT nom, prenom FROM usto_users WHERE id = ?");
+    $prof_stmt->execute([$filter_prof]);
+    $prof_data = $prof_stmt->fetch();
+    if ($prof_data) {
+        $_SESSION['filter_prof_name'] = $prof_data['nom'] . ' ' . $prof_data['prenom'];
+    }
+} else {
+    // Si ni groupe spécifique avec prof unique, ni prof spécifique n'est sélectionné, on efface la variable de session
+    unset($_SESSION['filter_prof_name']);
+}
+
+
 // Récupération des permissions d'édition des notes
 $permissions_stmt = $db->query("SELECT prof_id, note_type, can_edit FROM usto_prof_permissions WHERE can_edit = 1");
 $edit_permissions = [];
@@ -288,19 +319,39 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
             }
 
             const filterGroupeSelect = document.querySelector('select[name="filter_groupe"]');
-            const groupe = filterGroupeSelect.options[filterGroupeSelect.selectedIndex].text.trim() || 'tous'; // .text for display name, .trim() to remove extra spaces
+            const groupeValue = filterGroupeSelect.value;
+            const groupeText = (groupeValue === '' || groupeValue === 'tous') ? 'Tous' : filterGroupeSelect.options[filterGroupeSelect.selectedIndex].text.trim(); 
+
             const noteKey = selectedColumns[0];
-            const noteLabel = noteColumnsMapping[noteKey] || 'Note'; // Uses global noteColumnsMapping from exportToExcel script block
-            const selectedProfId = document.querySelector('select[name="filter_prof"]').value; // Value of selected professor
+            const noteLabel = noteColumnsMapping[noteKey] || 'Note';
+            
+            const filterProfSelect = document.querySelector('select[name="filter_prof"]');
+            const selectedProfId = filterProfSelect.value;
+            let profFullName = (selectedProfId === '' || selectedProfId === 'tous') ? 'Tous' : filterProfSelect.options[filterProfSelect.selectedIndex].text.trim();
+
+            // Check if PHP provided a specific professor name due to group filtering
+            const filteredProfNameFromPHP = <?php echo isset($_SESSION['filter_prof_name']) && $_SESSION['filter_prof_name'] !== 'Tous' ? json_encode($_SESSION['filter_prof_name']) : 'null'; ?>;
+
+            if (groupeValue !== '' && groupeValue !== 'tous' && (selectedProfId === '' || selectedProfId === 'tous')) {
+                if (filteredProfNameFromPHP) {
+                    profFullName = filteredProfNameFromPHP;
+                } 
+            }
+            
+            // Extract only the last name for profText
+            let profText = profFullName;
+            if (profFullName !== 'Tous' && profFullName.includes(' ')) {
+                profText = profFullName.split(' ')[0]; // Assumes Nom Prénom format
+            }
 
             // Permission check using global editPermissions
             let canExport = true;
-            if (selectedProfId && selectedProfId !== 'tous') { // A specific professor is selected (value is not empty and not 'tous')
+            if (selectedProfId && selectedProfId !== 'tous') { 
                 if (editPermissions[noteKey] && editPermissions[noteKey].includes(selectedProfId)) {
                     canExport = false;
                     alert(`Exportation PDF impossible: Le professeur sélectionné a les droits d'édition pour ${noteLabel}.`);
                 }
-            } else { // "Tous les professeurs" is selected (selectedProfId is empty or 'tous')
+            } else { 
                 if (editPermissions[noteKey] && editPermissions[noteKey].length > 0) {
                     canExport = false;
                     alert(`Exportation PDF impossible: Au moins un professeur a les droits d'édition pour ${noteLabel}.`);
@@ -311,16 +362,26 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
                 return;
             }
 
-            const dataForPdf = [];
-            const headers = ['N° Inscription', 'Nom', 'Prénom', noteLabel];
+            // Sort studentData by groupe then by nom
+            const sortedStudentData = [...studentData].sort((a, b) => {
+                // Sort by groupe first
+                if (a.groupe < b.groupe) return -1;
+                if (a.groupe > b.groupe) return 1;
+                // Then by nom
+                if (a.nom < b.nom) return -1;
+                if (a.nom > b.nom) return 1;
+                return 0;
+            });
 
-            // Use global studentData, already filtered by PHP if filters are applied, or all students if no filters
-            studentData.forEach(student => {
-                const matricule = student.matricule;
+            const dataForPdf = [];
+            const headers = ['Groupe', 'Nom', 'Prénom', noteLabel]; // Changed 'N° Inscription' to 'Groupe'
+
+            sortedStudentData.forEach(student => {
+                const studentGroupe = student.groupe; // Get student's group
                 const nom = student.nom;
                 const prenom = student.prenom;
                 const noteValue = (student[noteKey] !== undefined && student[noteKey] !== null) ? String(student[noteKey]) : 'N/A';
-                dataForPdf.push([matricule, nom, prenom, noteValue]);
+                dataForPdf.push([studentGroupe, nom, prenom, noteValue]);
             });
 
             if (dataForPdf.length === 0) {
@@ -328,22 +389,21 @@ foreach ($permissions_stmt->fetchAll(PDO::FETCH_ASSOC) as $perm) {
                 return;
             }
 
-            const doc = new window.jspdf.jsPDF(); // Use window.jspdf.jsPDF to ensure it's accessed correctly
+            const doc = new window.jspdf.jsPDF(); 
             doc.autoTable({
                 head: [headers],
                 body: dataForPdf,
-                startY: 25, // Start table after title
-                headStyles: { fillColor: [41, 128, 185] }, // A nice blue for header
+                startY: 25, 
+                headStyles: { fillColor: [41, 128, 185] }, 
                 didDrawPage: function (data) {
-                    // Page Title
                     doc.setFontSize(18);
                     doc.setTextColor(40);
-                    doc.text(`Notes - ${noteLabel} (Groupe: ${groupe})`, data.settings.margin.left, 15);
+                    // New title format: typeNote - NomProf
+                    doc.text(`${noteLabel} - ${profText}`, data.settings.margin.left, 15);
                 }
             });
-
-            const filename = `${groupe}_${noteKey}.pdf`;
-            doc.save(filename);
+            // Filename format remains: typeNote_Groupe_NomProf.pdf
+            doc.save(`${noteLabel}_${groupeText}_${profText}.pdf`);
         }
     </script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap5.min.css">
